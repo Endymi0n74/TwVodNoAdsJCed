@@ -229,6 +229,10 @@ const workerStringReinsert = [
 - Dédoublonnage `vodsUnlocked` par `vodId` : le worker envoie `VodBypassed` avec le `vodId`, le contexte page garde un `Set` en session → re-fetch du player (switch qualité, retries) ne sur-compte plus
 - `buildVodPlaylist` utilise `gqlRequestWithRetry` (backoff 1s/2s/4s, 3 tentatives) au lieu du fetch GQL brut à un seul essai
 
+### CI GitHub Actions
+- `.github/workflows/ci.yml` : sur chaque push master / PR → `node --check` (userscript + harness) + `node combined/test-buildVodPlaylist.js` (110 assertions)
+- `.github/workflows/release.yml` : sur push d'un tag `v*` → vérifie que `@version` du script == tag, puis crée la release GitHub avec `twitch-combined.user.js` en pièce jointe (notes auto) — plus de `gh release create` manuel, il suffit de `git tag vX.Y.Z && git push origin vX.Y.Z`
+
 ### v1.1.3 - toggles infaillibles (ACK worker + fallback reload page)
 - Retour utilisateur : « quand je mets les toggles sur off j'ai toujours accès à tout » (message identique après v1.1.2) → le reload du player pouvait échouer SILENCIEUSEMENT (`getPlayerAndState` ne trouve plus le player / player en pause → `doTwitchPlayerTask` retournait tôt sans rien faire)
 - Fix : `doTwitchPlayerTask` retourne un booléen ; `applyFeatureFlag` vérifie le résultat → si le reload du player échoue, **fallback `location.reload()`** (garanti) ; try/catch autour du reload

@@ -51,6 +51,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 
 - `combined/twitch-combined.user.js` — **le script** (à installer)
 - `combined/test-buildVodPlaylist.js` — harness de test Node du bypass VOD (mock fetch/GQL, 3 branches, format playlist) — `node combined/test-buildVodPlaylist.js`
+- `.github/workflows/` — **CI** : `node --check` + harness sur chaque push, et release automatique sur tag `v*` (script en pièce jointe)
 - `vaft/`, `video-swap-new/` — scripts upstream d'origine (le combiné en dérive)
 - `MEMORY.md` — mémoire de développement (règles, bugs connus, backlog)
 - `CHANGELOG.md` — historique des versions

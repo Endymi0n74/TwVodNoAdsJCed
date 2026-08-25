@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax check (userscript + harness)
+        run: |
+          node --check combined/twitch-combined.user.js
+          node --check combined/test-buildVodPlaylist.js
+
+      - name: Run test harness
+        run: node combined/test-buildVodPlaylist.js
