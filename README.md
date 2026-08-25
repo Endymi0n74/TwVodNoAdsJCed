@@ -56,6 +56,40 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 - `issues.md` — problèmes connus de la base vaft / video-swap-new
 - `LICENSE` — MIT
 
+## ❓ FAQ — erreurs courantes & conflits
+
+### Le script ne fait rien
+- Vérifiez dans la console (F12) la présence de `hookWorkerFetch (vaft)` après un refresh. S'il n'y a pas, le script n'est pas injecté.
+- **Chrome / Manifest V3** : allez dans `chrome://extensions` → Détails de Tampermonkey → activez **« Allow user scripts »**.
+- Vérifiez que le script est activé : bouton **⏻ ON/OFF** dans le header (ou `localStorage["twitchnosub-enabled"]` ≠ `"false"`).
+
+### Conflits avec d'autres scripts / extensions
+- **Ne combinez jamais TwVodNoAdsJCed avec un autre bloqueur de pubs Twitch** (vaft, TTV LOL PRO, Purple AdBlock, TwitchNoSub, AdGuard Extra…). Deux scripts qui hookent les Workers de Twitch se marchent dessus : boucles infinies, freeze, crash du player.
+- Désactivez les autres avant d'utiliser celui-ci.
+
+### Error 3000 (erreur décodeur)
+- Cause la plus fréquente : conflit avec un autre script ou segments en cache périmés.
+- Videz le cache du navigateur, rechargez la page, et assurez-vous qu'aucun autre bloqueur Twitch n'est actif.
+
+### Une VOD sub-only ne joue pas
+- Logs attendus en console : `Usher VOD request failed (403) — building bypass playlist` puis `VOD bypass: serving generated playlist`.
+- Si vous voyez `VOD bypass: no valid quality found` ou `Missing VOD metadata` : la structure CDN de Twitch a changé — [ouvrez une issue](https://github.com/Endymi0n74/TwVodNoAdsJCed/issues) avec les logs.
+- Limite connue : certaines VODs uploadées récentes (moins de 7 jours) ou certains uploads très anciens peuvent échouer (méthode basée sur la structure actuelle du CDN).
+
+### Le stream freeze / buffering pendant les pubs
+- C'est un problème connu de la base vaft (`Blocking ads (stripping)` = suppression active des segments pub sans stream de secours).
+- Essayez de mettre pause/play, ou ajustez les options `PlayerBufferingFix` / `AlwaysReloadPlayerOnAd` dans le code. Voir [issues.md](issues.md).
+
+### Écran noir / « Blocking ads (stripping) » affiché
+- Normal : le script supprime les segments pub en direct mais n'a pas encore trouvé de stream propre. Patientez quelques secondes.
+
+### Les boutons du header n'apparaissent pas
+- Les boutons sont injectés dans le header des pages de chaîne (là où se trouvent viewers / durée). Sur les pages d'accueil ou browse, ils n'apparaissent pas.
+- Si le header Twitch change de structure, l'ancrage peut ne plus matcher — [ouvrez une issue](https://github.com/Endymi0n74/TwVodNoAdsJCed/issues) avec la structure DOM (clic droit → Inspecter).
+
+### Mobile (m.twitch.tv)
+- Non supporté. Utilisez une solution dédiée mobile (voir [la liste de pixeltris](https://github.com/pixeltris/TwitchAdSolutions)).
+
 ## ⚖️ Licence
 
 MIT — Copyright (c) TwitchAdSolutions Contributors. Voir [LICENSE](LICENSE).
