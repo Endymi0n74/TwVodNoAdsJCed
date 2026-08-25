@@ -1,5 +1,7 @@
 # TwVodNoAdsJCed
 
+[![Install with Tampermonkey](https://img.shields.io/badge/Install%20with-Tampermonkey-9146FF?style=for-the-badge)](https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js)
+
 Userscript Tampermonkey qui **bloque les pubs Twitch**, **débloque les VODs sub-only** et **dé-mute les VODs**.
 
 Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSolutions) (script `vaft`) et sur la méthode de bypass VOD de [besuper/TwitchNoSub](https://github.com/besuper/TwitchNoSub).
