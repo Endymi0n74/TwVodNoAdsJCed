@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="540" viewBox="0 0 660 540" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- fond type Twitch -->
+  <rect width="660" height="540" fill="#18181b"/>
+
+  <!-- zone vidéo -->
+  <rect x="20" y="20" width="620" height="200" rx="6" fill="#0e0e10"/>
+  <text x="34" y="60" fill="#3a3a3d" font-size="13">Zone vidéo (ex. live kenbogard)</text>
+  <rect x="20" y="216" width="620" height="4" fill="#9146FF"/>
+
+  <!-- barre de chaîne : infos + boutons Stats / ON -->
+  <text x="34" y="256" fill="#efeff1" font-size="15" font-weight="700">kenbogard</text>
+  <text x="34" y="274" fill="#a0a0a0" font-size="12">NINTENBROADTRIP — ROAD TO GAMESCOM</text>
+
+  <rect x="420" y="236" width="92" height="28" rx="6" fill="#26262c"/>
+  <text x="433" y="254" fill="#efeff1" font-size="12" font-weight="600">📊 Stats</text>
+
+  <rect x="520" y="236" width="80" height="28" rx="6" fill="#26262c"/>
+  <text x="533" y="254" fill="#efeff1" font-size="12" font-weight="600">⏻ ON</text>
+
+  <!-- panneau déroulant -->
+  <g filter="url(#shadow)">
+    <rect x="420" y="282" width="310" height="238" rx="10" fill="#1e222d" stroke="#3a4150" stroke-width="1"/>
+
+    <text x="434" y="312" fill="#9146FF" font-size="14" font-weight="700">📊 TwitchNoSub+Ads</text>
+
+    <text x="434" y="340" fill="#efeff1" font-size="13">Pubs bloquées</text>
+    <text x="716" y="340" fill="#efeff1" font-size="13" font-weight="700" text-anchor="end">906</text>
+
+    <text x="434" y="364" fill="#efeff1" font-size="13">VODs débloquées</text>
+    <text x="716" y="364" fill="#efeff1" font-size="13" font-weight="700" text-anchor="end">3</text>
+
+    <line x1="434" y1="380" x2="716" y2="380" stroke="#3a4150" stroke-width="1"/>
+
+    <text x="434" y="408" fill="#efeff1" font-size="13">📺 Blocage pubs</text>
+    <rect x="676" y="394" width="40" height="20" rx="10" fill="#9146FF"/>
+    <circle cx="706" cy="404" r="8" fill="#efeff1"/>
+
+    <text x="434" y="442" fill="#efeff1" font-size="13">🎬 VODs sub-only</text>
+    <rect x="676" y="428" width="40" height="20" rx="10" fill="#3a3a3d"/>
+    <circle cx="686" cy="438" r="8" fill="#efeff1"/>
+  </g>
+</svg>

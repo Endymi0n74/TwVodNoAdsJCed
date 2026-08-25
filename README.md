@@ -16,17 +16,43 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 - **Boutons dans le header Twitch** — `📊 Stats` (toast avec les compteurs) et `⏻ ON/OFF` (activation/désactivation du script)
 - **Stats en console** — compteurs persistants (localStorage) : pubs bloquées / VODs débloquées
 
-## 📦 Installation
+## 📦 Installation — guide pas à pas
 
-1. Installer [Tampermonkey](https://www.tampermonkey.net/) (sur Chrome : activer « Allow user scripts » dans les paramètres de l'extension)
-2. Ouvrir l'URL d'installation : <https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js>
-3. Cliquer sur « Installer »
+### 1. Installer Tampermonkey (si besoin)
+- [Tampermonkey pour Chrome](https://chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) · [pour Firefox](https://addons.mozilla.org/fr/firefox/addon/tampermonkey/)
+- ⚠️ **Chrome / Manifest V3 uniquement** : allez dans `chrome://extensions` → **Détails** de Tampermonkey → activez **« Autoriser les scripts utilisateur »** (Allow user scripts). Sans cette option, le script ne s'exécute jamais.
+
+### 2. Installer le script
+- Cliquez sur le **badge violet « Install with Tampermonkey »** en haut de ce README, ou ouvrez directement :
+  <https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js>
+- Tampermonkey affiche la page d'installation → cliquez sur **« Installer »**
+
+### 3. Vérifier que ça marche
+- Allez sur **twitch.tv** (n'importe quelle chaîne) et ouvrez la console (**F12**)
+- Vous devez voir : `hookWorkerFetch (vaft)` puis le résumé `📊 TwitchNoSub+Ads` avec vos compteurs
+- Le bouton **📊 Stats** apparaît à gauche de la barre viewers/durée du header
+
+### 4. Mettre à jour
+- **Automatique** : le script se met à jour tout seul (via `@updateURL`, contrôle périodique de Tampermonkey)
+- **Manuel** : tableau de bord Tampermonkey → script → **Mettre à jour** (ou réinstaller depuis l'URL ci-dessus)
+- Vérifiez la version affichée (badge version du README / `@version` dans le script) — voir [CHANGELOG.md](CHANGELOG.md)
+
+### 5. Désactiver / désinstaller
+- **Désactiver temporairement** : bouton **⏻ OFF** dans le header (recharge la page, le bouton reste accessible pour réactiver)
+- **Désinstaller** : tableau de bord Tampermonkey → corbeille sur le script
 
 ## 🚀 Utilisation
 
+![Panneau TwitchNoSub+Ads](docs/panel-preview.svg)
+
 - Sur une chaîne Twitch, deux boutons apparaissent **à gauche de la barre viewers/durée** du header :
-  - **📊 Stats** — affiche un toast avec `Pubs bloquées` / `VODs débloquées`
-  - **⏻ ON/OFF** — désactive ou réactive le script (recharge la page ; le bouton reste accessible en OFF pour réactiver)
+  - **📊 Stats** — ouvre le **panneau déroulant** : compteurs + toggles (voir capture ci-dessus)
+  - **⏻ ON/OFF** — désactive/réactive **tout** le script (recharge la page ; le bouton reste accessible en OFF)
+- **Le panneau** :
+  - `📺 Blocage pubs` — **ON** : bloque les pubs live (stream propre). **OFF** : les pubs repassent normalement
+  - `🎬 VODs sub-only` — **ON** : débloque les VODs réservées aux abonnés (+ dé-mute les VODs mutées). **OFF** : le paywall Twitch reste affiché
+  - Les toggles s'appliquent **immédiatement** (le player se recharge, ou la page si besoin) — aucun rechargement manuel
+  - ⚠️ Les **clips et VODs publiques** jouent toujours, quel que soit le toggle VODs (rien à débloquer — normal)
 - **Console (F12)** : résumé des stats au chargement, puis un log à chaque pub bloquée (`📺 Pub bloquée`) et à chaque VOD débloquée (`🎬 VOD sub-only débloquée`)
 
 ## ⚠️ Attention
@@ -36,7 +62,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 
 ## 🏗️ Architecture
 
-`combined/twitch-combined.user.js` — script unique (~1 400 lignes), dérivé de vaft :
+`combined/twitch-combined.user.js` — script unique (~1 500 lignes), dérivé de vaft :
 
 | Bloc | Rôle |
 |------|------|
@@ -51,6 +77,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 
 - `combined/twitch-combined.user.js` — **le script** (à installer)
 - `combined/test-buildVodPlaylist.js` — harness de test Node du bypass VOD (mock fetch/GQL, 3 branches, format playlist) — `node combined/test-buildVodPlaylist.js`
+- `docs/panel-preview.svg` — capture d'écran (rendu SVG) du panneau pour le README
 - `.github/workflows/` — **CI** : `node --check` + harness sur chaque push, et release automatique sur tag `v*` (script en pièce jointe)
 - `vaft/`, `video-swap-new/` — scripts upstream d'origine (le combiné en dérive)
 - `MEMORY.md` — mémoire de développement (règles, bugs connus, backlog)
@@ -59,6 +86,10 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 - `LICENSE` — MIT
 
 ## ❓ FAQ — erreurs courantes & conflits
+
+### Comment vérifier la version installée ?
+- Tampermonkey → tableau de bord : la colonne « Version » affiche la version installée (ex. `1.1.3`).
+- Comparez avec le badge version du README ou la dernière entrée du [CHANGELOG](CHANGELOG.md). Si une version plus récente existe : **Mettre à jour** (ou réinstaller depuis l'URL d'installation).
 
 ### Le script ne fait rien
 - Vérifiez dans la console (F12) la présence de `hookWorkerFetch (vaft)` après un refresh. S'il n'y a pas, le script n'est pas injecté.
