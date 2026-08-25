@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TwVodNoAdsJCed
 // @namespace    https://github.com/Endymi0n74/TwVodNoAdsJCed
-// @version      1.1.2
+// @version      1.1.3
 // @description  Block Twitch ads + watch sub-only VODs (with unmute)
 // @updateURL    https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js
 // @downloadURL  https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js
@@ -192,6 +192,7 @@
                             if (e.data.value && typeof e.data.value.adsEnabled === 'boolean') { tnsAdsEnabled = e.data.value.adsEnabled; }
                             if (e.data.value && typeof e.data.value.vodsEnabled === 'boolean') { tnsVodsEnabled = e.data.value.vodsEnabled; }
                             console.log('tns flags à chaud: ads=' + tnsAdsEnabled + ' vods=' + tnsVodsEnabled);
+                            postMessage({ key: 'FeatureFlagsAck', value: { adsEnabled: tnsAdsEnabled, vodsEnabled: tnsVodsEnabled } });
                         } else if (e.data.key == 'SimulateAds') {
                             SimulatedAdsDepth = e.data.value;
                             console.log('SimulatedAdsDepth: ' + SimulatedAdsDepth);
@@ -226,6 +227,8 @@
                         stats.vodsUnlocked++;
                         saveStats();
                         console.log('%c🎬 VOD sub-only débloquée', 'color:#9146FF', '— total : ' + stats.vodsUnlocked);
+                    } else if (e.data.key == 'FeatureFlagsAck') {
+                        console.log('%c✅ Flags appliqués dans le worker: pubs=' + (e.data.value.adsEnabled ? 'ON' : 'OFF') + ' · VODs=' + (e.data.value.vodsEnabled ? 'ON' : 'OFF'), 'color:#9146FF');
                     } else if (e.data.key == 'PauseResumePlayer') {
                         doTwitchPlayerTask(true, false);
                     } else if (e.data.key == 'ReloadPlayer') {
@@ -1035,27 +1038,27 @@
         const playerAndState = getPlayerAndState();
         if (!playerAndState) {
             console.log('Could not find react root');
-            return;
+            return false;
         }
         const player = playerAndState.player;
         const playerState = playerAndState.state;
         if (!player) {
             console.log('Could not find player');
-            return;
+            return false;
         }
         if (!playerState) {
             console.log('Could not find player state');
-            return;
+            return false;
         }
         if (player.isPaused() || player.core?.paused) {
-            return;
+            return false;
         }
         playerBufferState.lastFixTime = Date.now();
         playerBufferState.numSame = 0;
         if (isPausePlay) {
             player.pause();
             player.play();
-            return;
+            return true;
         }
         if (isReload) {
             const lsKeyQuality = 'video-quality';
@@ -1095,7 +1098,7 @@
                     } catch {}
                 }, 3000);
             }
-            return;
+            return true;
         }
     }
     window.reloadTwitchPlayer = () => {
@@ -1349,11 +1352,22 @@ function watchDOM() { var db = null; new MutationObserver(function(muts) { if (d
             tnsVodsEnabled = enabled;
         }
         // Applique à chaud dans tous les workers (blob) — plus de reload de page
+        console.log('%c🎛️ Pubs: ' + (tnsAdsEnabled ? 'ON' : 'OFF') + ' · VODs: ' + (tnsVodsEnabled ? 'ON' : 'OFF') + ' — flags envoyés à ' + twitchWorkers.length + ' worker(s)', 'color:#9146FF');
         postTwitchWorkerMessage('UpdateFeatureFlags', { adsEnabled: tnsAdsEnabled, vodsEnabled: tnsVodsEnabled });
-        console.log('%c🎛️ Pubs: ' + (tnsAdsEnabled ? 'ON' : 'OFF') + ' · VODs: ' + (tnsVodsEnabled ? 'ON' : 'OFF'), 'color:#9146FF');
-        // Recharge le player pour appliquer immédiatement : nouvelle requête usher/m3u8 →
-        // paywall (VODs OFF) ou pubs (pubs OFF) visibles tout de suite, sans attendre le prochain fetch
-        setTimeout(function() { doTwitchPlayerTask(false, true); }, 150);
+        // Recharge le player pour appliquer immédiatement (nouvelle requête usher/m3u8 → paywall ou pubs).
+        // Si le reload du player échoue (player introuvable / en pause), fallback : rechargement de la page (garanti).
+        setTimeout(function() {
+            try {
+                const reloaded = doTwitchPlayerTask(false, true);
+                if (!reloaded) {
+                    console.log('%c🔄 Reload du player impossible — rechargement de la page pour appliquer', 'color:#ff7b72');
+                    location.reload();
+                }
+            } catch (err) {
+                console.log('%c🔄 Reload du player en erreur (' + err.message + ') — rechargement de la page pour appliquer', 'color:#ff7b72');
+                location.reload();
+            }
+        }, 150);
     }
     function injectHeaderButtons(disabledOnly) {
         if (!document.getElementById("tns-hbtn-style")) {

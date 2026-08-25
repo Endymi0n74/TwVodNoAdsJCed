@@ -229,6 +229,13 @@ const workerStringReinsert = [
 - Dédoublonnage `vodsUnlocked` par `vodId` : le worker envoie `VodBypassed` avec le `vodId`, le contexte page garde un `Set` en session → re-fetch du player (switch qualité, retries) ne sur-compte plus
 - `buildVodPlaylist` utilise `gqlRequestWithRetry` (backoff 1s/2s/4s, 3 tentatives) au lieu du fetch GQL brut à un seul essai
 
+### v1.1.3 - toggles infaillibles (ACK worker + fallback reload page)
+- Retour utilisateur : « quand je mets les toggles sur off j'ai toujours accès à tout » (message identique après v1.1.2) → le reload du player pouvait échouer SILENCIEUSEMENT (`getPlayerAndState` ne trouve plus le player / player en pause → `doTwitchPlayerTask` retournait tôt sans rien faire)
+- Fix : `doTwitchPlayerTask` retourne un booléen ; `applyFeatureFlag` vérifie le résultat → si le reload du player échoue, **fallback `location.reload()`** (garanti) ; try/catch autour du reload
+- **ACK worker → page** : le blob répond `FeatureFlagsAck` après `UpdateFeatureFlags` → log console `✅ Flags appliqués dans le worker` = preuve que le message est arrivé
+- Logs de diagnostic : `🎛️ Pubs: X · VODs: Y — flags envoyés à N worker(s)` + log ACK + log fallback
+- Blob vérifié syntaxiquement (parser accolades imbriquées) : valide
+
 ### v1.1.2 - toggles appliqués immédiatement (reload player)
 - Bug report : « quand je mets les toggles sur off j'ai toujours accès à tout » → les portes étaient CORRECTES (vérifié par simulation Node du blob, 8/8), mais l'effet n'était visible qu'au prochain fetch (une VOD chargée ne re-demande jamais usher tant qu'elle joue)
 - Fix : `applyFeatureFlag` déclenche `doTwitchPlayerTask(false, true)` (reload player) 150ms après le toggle → paywall/pubs immédiats

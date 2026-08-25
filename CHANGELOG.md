@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.3 (2026-08-25)
+- **Toggles infaillibles** : si le reload du player échoue (player introuvable/en pause), la page se recharge automatiquement pour garantir l'application — plus aucun cas où le toggle semble ne rien faire
+- **Diagnostic** : le worker confirme l'application des flags (`FeatureFlagsAck` → log `✅ Flags appliqués dans le worker`), logs clairs à chaque étape du toggle
+
 ## v1.1.2 (2026-08-25)
 - **Toggles appliqués immédiatement** : basculer pubs/VODs recharge maintenant le player (au lieu d'attendre le prochain fetch) → couper « VODs sub-only » affiche le paywall tout de suite, couper « Blocage pubs » fait repasser les pubs immédiatement
 - Harness étendu : portes pubs/VODs de `hookWorkerFetch` testées (bypass, stripping, dé-mute) — 110 assertions au total
