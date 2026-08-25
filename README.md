@@ -43,7 +43,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 
 ## 🚀 Utilisation
 
-![Panneau TwitchNoSub+Ads](docs/panel-preview.svg)
+![Panneau TwitchNoSub+Ads](docs/panel.png)
 
 - Sur une chaîne Twitch, deux boutons apparaissent **à gauche de la barre viewers/durée** du header :
   - **📊 Stats** — ouvre le **panneau déroulant** : compteurs + toggles (voir capture ci-dessus)
@@ -77,7 +77,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 
 - `combined/twitch-combined.user.js` — **le script** (à installer)
 - `combined/test-buildVodPlaylist.js` — harness de test Node du bypass VOD (mock fetch/GQL, 3 branches, format playlist) — `node combined/test-buildVodPlaylist.js`
-- `docs/panel-preview.svg` — capture d'écran (rendu SVG) du panneau pour le README
+- `docs/panel.png` — capture d'écran du panneau pour le README
 - `.github/workflows/` — **CI** : `node --check` + harness sur chaque push, et release automatique sur tag `v*` (script en pièce jointe)
 - `vaft/`, `video-swap-new/` — scripts upstream d'origine (le combiné en dérive)
 - `MEMORY.md` — mémoire de développement (règles, bugs connus, backlog)
