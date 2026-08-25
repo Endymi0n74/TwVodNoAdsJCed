@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TwVodNoAdsJCed
 // @namespace    https://github.com/Endymi0n74/TwVodNoAdsJCed
-// @version      1.1.0
+// @version      1.1.1
 // @description  Block Twitch ads + watch sub-only VODs (with unmute)
 // @updateURL    https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js
 // @downloadURL  https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js
@@ -154,6 +154,8 @@
                     ClientIntegrityHeader = ${ClientIntegrityHeader ? "'" + ClientIntegrityHeader + "'" : null};
                     ClientVersion = ${ClientVersion ? "'" + ClientVersion + "'" : null};
                     ClientSession = ${ClientSession ? "'" + ClientSession + "'" : null};
+                    let tnsAdsEnabled = ${tnsAdsEnabled};
+                    let tnsVodsEnabled = ${tnsVodsEnabled};
                     self.addEventListener('message', function(e) {
                         if (e.data.key == 'UpdateClientVersion') {
                             ClientVersion = e.data.value;
@@ -186,6 +188,10 @@
                             }
                         } else if (e.data.key == 'TriggeredPlayerReload') {
                             HasTriggeredPlayerReload = true;
+                        } else if (e.data.key == 'UpdateFeatureFlags') {
+                            if (e.data.value && typeof e.data.value.adsEnabled === 'boolean') { tnsAdsEnabled = e.data.value.adsEnabled; }
+                            if (e.data.value && typeof e.data.value.vodsEnabled === 'boolean') { tnsVodsEnabled = e.data.value.vodsEnabled; }
+                            console.log('tns flags à chaud: ads=' + tnsAdsEnabled + ' vods=' + tnsVodsEnabled);
                         } else if (e.data.key == 'SimulateAds') {
                             SimulatedAdsDepth = e.data.value;
                             console.log('SimulatedAdsDepth: ' + SimulatedAdsDepth);
@@ -212,6 +218,11 @@
                         }
                         updateAdblockBanner(e.data);
                     } else if (e.data.key == 'VodBypassed') {
+                        // Dedupe: the player re-fetches the same VOD (quality switch, retries) — count each vodId once per session
+                        if (e.data.vodId) {
+                            if (seenVodIds.has(e.data.vodId)) { return; }
+                            seenVodIds.add(e.data.vodId);
+                        }
                         stats.vodsUnlocked++;
                         saveStats();
                         console.log('%c🎬 VOD sub-only débloquée', 'color:#9146FF', '— total : ' + stats.vodsUnlocked);
@@ -276,7 +287,8 @@
                     // VOD playlist: usher returns 403 for sub-only VODs, build a direct CDN playlist instead
                     return new Promise(function(resolve, reject) {
                         const processAfter = async function(response) {
-                            if (response.status === 200) {
+                            if (response.status === 200 || !tnsVodsEnabled) {
+                                // VODs désactivées : on laisse Twitch gérer (pas de bypass)
                                 resolve(response);
                             } else {
                                 console.log('Usher VOD request failed (' + response.status + ') — building bypass playlist');
@@ -298,12 +310,13 @@
                         const processAfter = async function(response) {
                             if (response.status === 200) {
                                 let m3u8Text = await response.text();
-                                if (url.includes('cloudfront')) {
+                                if (url.includes('cloudfront') && tnsVodsEnabled) {
                                     // TwitchNoSub trick: muted VOD segments are served under '-unmuted' names,
                                     // the original-audio versions exist as '-muted' — swap to unmute VODs
                                     m3u8Text = m3u8Text.replace(/-unmuted/g, '-muted');
                                 }
-                                resolve(new Response(await processM3U8(url, m3u8Text, realFetch)));
+                                // Pubs désactivées : on renvoie le m3u8 brut, sans stripping
+                                resolve(new Response(tnsAdsEnabled ? await processM3U8(url, m3u8Text, realFetch) : m3u8Text));
                             } else {
                                 resolve(response);
                             }
@@ -318,6 +331,10 @@
                         send();
                     });
                 } else if (url.includes('/channel/hls/') && !url.includes('picture-by-picture')) {
+                    if (!tnsAdsEnabled) {
+                        // Pubs désactivées : pas de hook, Twitch joue les pubs normalement
+                        return realFetch(url, options);
+                    }
                     V2API = url.includes('/api/v2/');
                     const channelName = (new URL(url)).pathname.match(/([^\/]+)(?=\.\w+$)/)[0];
                     if (ForceAccessTokenPlayerType) {
@@ -430,20 +447,13 @@
             console.log('Building bypass playlist for VOD ' + vodId);
             let gqlData;
             try {
-                const gqlResp = await realFetch('https://gql.twitch.tv/gql', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        query: 'query { video(id: "' + vodId + '") { broadcastType, createdAt, seekPreviewsURL, owner { login } } }'
-                    }),
-                    headers: {
-                        'Client-Id': ClientID,
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
-                });
+                // Reuse gqlRequestWithRetry (backoff 1s/2s/4s, 3 attempts) instead of a raw single-shot fetch
+                const gqlResp = await gqlRequestWithRetry({
+                    query: 'query { video(id: "' + vodId + '") { broadcastType, createdAt, seekPreviewsURL, owner { login } } }'
+                }, 'site');
                 gqlData = await gqlResp.json();
             } catch (err) {
-                console.log('VOD bypass: GQL failed ' + err);
+                console.log('VOD bypass: GQL failed after retries: ' + err.message);
                 return new Response('VOD bypass: GQL failed', { status: 403 });
             }
             const vodData = gqlData && gqlData.data && gqlData.data.video;
@@ -498,7 +508,7 @@
                 return new Response('No valid quality found', { status: 403 });
             }
             console.log('VOD bypass: serving generated playlist for ' + vodId);
-            postMessage({ key: 'VodBypassed' });
+            postMessage({ key: 'VodBypassed', vodId: vodId });
             return new Response(fakePlaylist, { status: 200, headers: { 'Content-Type': 'application/vnd.apple.mpegurl' } });
         })();
     }
@@ -877,6 +887,7 @@
         isLive: true
     };
     function monitorPlayerBuffering() {
+        if (!tnsAdsEnabled) { return; } // boucle arrêtée quand pubs désactivées (relancée par applyFeatureFlag)
         if (playerForMonitoringBuffering) {
             try {
                 const player = playerForMonitoringBuffering.player;
@@ -956,6 +967,7 @@
         setTimeout(monitorPlayerBuffering, PlayerBufferingDelay);
     }
     function updateAdblockBanner(data) {
+        if (!tnsAdsEnabled) { return; } // Pubs désactivées : pas de bannière
         const playerRootDiv = document.querySelector('.video-player');
         if (playerRootDiv != null) {
             let adBlockDiv = null;
@@ -1143,7 +1155,7 @@
                     if (init && typeof init.body === 'string' && init.body.includes('PlaybackAccessToken') && init.body.includes('picture-by-picture')) {
                         init.body = '';
                     }
-                    if (ForceAccessTokenPlayerType && typeof init.body === 'string' && init.body.includes('PlaybackAccessToken')) {
+                    if (tnsAdsEnabled && ForceAccessTokenPlayerType && typeof init.body === 'string' && init.body.includes('PlaybackAccessToken')) {
                         let replacedPlayerType = '';
                         const newBody = JSON.parse(init.body);
                         if (Array.isArray(newBody)) {
@@ -1279,8 +1291,12 @@ function watchDOM() { var db = null; new MutationObserver(function(muts) { if (d
 
 
     const stats = {adsBlocked:0, vodsUnlocked:0};
+    const seenVodIds = new Set(); // dédoublonnage vodsUnlocked par vodId (session)
     try { Object.assign(stats, JSON.parse(localStorage.getItem("twitchnosub-stats")||"{}")); } catch(e) {}
     function saveStats() { try { localStorage.setItem("twitchnosub-stats", JSON.stringify(stats)); } catch(e) {} }
+    // Kill-switches indépendants (pubs / VODs) — mutables pour application à chaud, injectés dans le blob à sa construction
+    let tnsAdsEnabled = localStorage.getItem("twitchnosub-ads") !== "false";
+    let tnsVodsEnabled = localStorage.getItem("twitchnosub-vods") !== "false";
     function logStats() {
         console.log('%c📊 TwitchNoSub+Ads', 'color:#9146FF;font-weight:bold;font-size:13px');
         console.log('   📺 Pubs bloquées  : ' + stats.adsBlocked);
@@ -1288,26 +1304,53 @@ function watchDOM() { var db = null; new MutationObserver(function(muts) { if (d
     }
 
     // ── Header buttons (stats + on/off), injectés dans la barre d'actions de la chaîne ──
-    function showStatsToast() {
-        let toast = document.getElementById("tns-stats-toast");
-        if (toast) { toast.remove(); }
-        toast = document.createElement("div");
-        toast.id = "tns-stats-toast";
-        toast.style.cssText = "position:fixed;bottom:20px;right:20px;background:#1e222d;border:1px solid #3a4150;border-radius:10px;padding:14px 18px;z-index:99999;color:#efeff1;font:13px/1.6 system-ui;box-shadow:0 8px 24px rgba(0,0,0,.5)";
-        toast.innerHTML = '<div style="font-weight:700;color:#9146FF;margin-bottom:4px">📊 TwitchNoSub+Ads</div>' +
-            'Pubs bloquées : <b>' + stats.adsBlocked + '</b><br>' +
-            'VODs débloquées : <b>' + stats.vodsUnlocked + '</b>';
-        document.body.appendChild(toast);
-        setTimeout(function() {
-            toast.style.transition = "opacity .3s";
-            toast.style.opacity = "0";
-            setTimeout(function() { toast.remove(); }, 300);
-        }, 3000);
+    function toggleStatsPanel() {
+        const existing = document.getElementById("tns-panel");
+        if (existing) { existing.remove(); return; }
+        const statsBtn = document.getElementById("tns-hstats");
+        if (!statsBtn) { return; }
+        const panel = document.createElement("div");
+        panel.id = "tns-panel";
+        panel.className = "tns-panel";
+        panel.innerHTML =
+            '<div class="tns-p-title">📊 TwitchNoSub+Ads</div>' +
+            '<div class="tns-p-stats"><span>Pubs bloquées</span><b>' + stats.adsBlocked + '</b></div>' +
+            '<div class="tns-p-stats"><span>VODs débloquées</span><b>' + stats.vodsUnlocked + '</b></div>' +
+            '<div class="tns-p-sep"></div>' +
+            '<div class="tns-p-row" data-flag="twitchnosub-ads" data-on="' + tnsAdsEnabled + '"><span>📺 Blocage pubs</span><span class="tns-p-pill' + (tnsAdsEnabled ? " on" : " off") + '"></span></div>' +
+            '<div class="tns-p-row" data-flag="twitchnosub-vods" data-on="' + tnsVodsEnabled + '"><span>🎬 VODs sub-only</span><span class="tns-p-pill' + (tnsVodsEnabled ? " on" : " off") + '"></span></div>';
+        panel.addEventListener("click", function(e) {
+            const row = e.target.closest ? e.target.closest(".tns-p-row") : null;
+            if (!row) { return; }
+            const flag = row.getAttribute("data-flag");
+            const next = row.getAttribute("data-on") !== "true";
+            localStorage.setItem(flag, next ? "true" : "false");
+            applyFeatureFlag(flag, next);
+            // mise à jour visuelle du toggle sans reload
+            row.setAttribute("data-on", next);
+            const pill = row.querySelector(".tns-p-pill");
+            if (pill) { pill.className = "tns-p-pill" + (next ? " on" : " off"); }
+        });
+        document.body.appendChild(panel);
+        const r = statsBtn.getBoundingClientRect();
+        panel.style.top = (r.bottom + 6) + "px";
+        panel.style.left = r.left + "px";
     }
     function toggleEnabled() {
         const next = localStorage.getItem("twitchnosub-enabled") === "false";
         localStorage.setItem("twitchnosub-enabled", next);
         location.reload();
+    }
+    function applyFeatureFlag(flag, enabled) {
+        if (flag === "twitchnosub-ads") {
+            tnsAdsEnabled = enabled;
+            if (enabled && PlayerBufferingFix) { monitorPlayerBuffering(); } // relance la boucle de buffering
+        } else if (flag === "twitchnosub-vods") {
+            tnsVodsEnabled = enabled;
+        }
+        // Applique à chaud dans tous les workers (blob) — plus de reload
+        postTwitchWorkerMessage('UpdateFeatureFlags', { adsEnabled: tnsAdsEnabled, vodsEnabled: tnsVodsEnabled });
+        console.log('%c🎛️ Pubs: ' + (tnsAdsEnabled ? 'ON' : 'OFF') + ' · VODs: ' + (tnsVodsEnabled ? 'ON' : 'OFF'), 'color:#9146FF');
     }
     function injectHeaderButtons(disabledOnly) {
         if (!document.getElementById("tns-hbtn-style")) {
@@ -1315,21 +1358,52 @@ function watchDOM() { var db = null; new MutationObserver(function(muts) { if (d
             style.id = "tns-hbtn-style";
             style.textContent = ".tns-hbtn{display:inline-flex;align-items:center;gap:5px;height:26px;margin-right:8px;padding:0 10px;border:none;border-radius:6px;background:#26262c;color:#efeff1;font:600 12px/1 system-ui;cursor:pointer;transition:background .15s}" +
                 ".tns-hbtn:hover{background:#3a3a3d}" +
-                ".tns-hbtn.off{background:#3a2430;color:#ff7b72}";
+                ".tns-hbtn.off{background:#3a2430;color:#ff7b72}" +
+                ".tns-panel{position:fixed;z-index:999999;min-width:235px;background:#1e222d;border:1px solid #3a4150;border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);font:13px/1.6 system-ui;color:#efeff1}" +
+                ".tns-p-title{font-weight:700;color:#9146FF;margin-bottom:8px}" +
+                ".tns-p-stats{display:flex;justify-content:space-between;align-items:center;padding:2px 0}" +
+                ".tns-p-sep{height:1px;background:#3a4150;margin:8px 0}" +
+                ".tns-p-row{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin:0 -6px;cursor:pointer;border-radius:6px}" +
+                ".tns-p-row:hover{background:#26262c}" +
+                ".tns-p-pill{width:40px;height:20px;border-radius:10px;background:#3a3a3d;position:relative;flex:none;transition:background .15s}" +
+                ".tns-p-pill::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#efeff1;transition:left .15s}" +
+                ".tns-p-pill.on{background:#9146FF}" +
+                ".tns-p-pill.on::after{left:22px}";
             document.head.appendChild(style);
+            // Fermeture du panneau au clic extérieur (écouté une seule fois)
+            document.addEventListener("click", function(e) {
+                const panel = document.getElementById("tns-panel");
+                const inside = e.target.closest ? !!e.target.closest("#tns-panel") : false;
+                if (panel && !inside && e.target.id !== "tns-hstats") {
+                    panel.remove();
+                }
+            }, true);
         }
-        const tryInject = function() {
-            if (document.getElementById("tns-hstats") || document.getElementById("tns-htoggle")) { return true; }
-            // Barre du bas du header (viewers / durée / partage / ⋮) — les boutons vont à GAUCHE, au niveau de la flèche
-            const dotsBtn = document.querySelector('[data-a-target="channel-actions"]');
+        const findContainer = function() {
+            // Barre du bas de la chaîne (viewers / durée / partage / ⋮) — les boutons vont à GAUCHE, au niveau de la flèche.
+            // Ancrages multiples : `share-button` est UNIQUE à cette barre ; `channel-actions` (⋮) existe aussi dans
+            // la nav du haut → on prend le DERNIER match et on privilégie le conteneur commun aux deux.
             const shareBtn = document.querySelector('[data-a-target="share-button"]');
+            const dotsList = document.querySelectorAll('[data-a-target="channel-actions"]');
+            const dots = dotsList.length ? dotsList[dotsList.length - 1] : null;
             let container = null;
-            if (dotsBtn) { container = dotsBtn.parentElement; }
-            else if (shareBtn) { container = shareBtn.parentElement; }
+            if (shareBtn && dots) {
+                // remonte depuis share jusqu'au conteneur qui contient aussi le ⋮ (la rangée viewers/durée/partage/⋮)
+                let p = shareBtn.parentElement;
+                while (p && p !== document.body && !p.contains(dots)) { p = p.parentElement; }
+                if (p && p !== document.body) { container = p; }
+            }
+            if (!container && shareBtn) { container = shareBtn.parentElement; }
+            if (!container && dots) { container = dots.parentElement; }
             if (!container) {
                 const giftBtn = document.querySelector('[data-a-target="gift-button"]');
                 if (giftBtn) { container = giftBtn.parentElement; }
             }
+            return container;
+        };
+        const tryInject = function() {
+            if (document.getElementById("tns-hstats") || document.getElementById("tns-htoggle")) { return true; }
+            const container = findContainer();
             if (!container) { return false; }
             const toggleBtn = document.createElement("button");
             toggleBtn.id = "tns-htoggle";
@@ -1345,16 +1419,17 @@ function watchDOM() { var db = null; new MutationObserver(function(muts) { if (d
                 statsBtn.className = "tns-hbtn";
                 statsBtn.textContent = "📊 Stats";
                 statsBtn.title = "Afficher les stats";
-                statsBtn.onclick = showStatsToast;
+                statsBtn.onclick = toggleStatsPanel;
                 container.prepend(toggleBtn);
                 container.prepend(statsBtn);
             }
+            console.log('%c🔘 Boutons TwVodNoAdsJCed injectés', 'color:#9146FF');
             return true;
         };
-        if (tryInject()) { return; }
-        new MutationObserver(function(muts, obs) {
-            if (!document.getElementById("tns-htoggle") && tryInject()) { obs.disconnect(); }
-        }).observe(document.documentElement, { childList: true, subtree: true });
+        // Intervalle léger (2s) : injecte dès que la barre existe et RÉ-injecte si Twitch re-rend le header
+        // (navigation SPA, sortie plein écran) — quelques querySelector par tick, négligeable.
+        tryInject();
+        setInterval(tryInject, 2000);
     }
 
     const isEnabled = localStorage.getItem("twitchnosub-enabled") !== "false";
@@ -1373,7 +1448,7 @@ declareOptions(window);
 removeRestrictions();
 watchDOM();
 
-    if (PlayerBufferingFix) {
+    if (PlayerBufferingFix && tnsAdsEnabled) {
         monitorPlayerBuffering();
     }
     if (document.readyState === "complete" || document.readyState === "loaded" || document.readyState === "interactive") {

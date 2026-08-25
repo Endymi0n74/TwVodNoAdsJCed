@@ -224,3 +224,25 @@ const workerStringReinsert = [
 - Fichiers du repo : `combined/twitch-combined.user.js`, README.md (réécrit), CHANGELOG.md (nouveau), MEMORY.md, issues.md, LICENSE (MIT)
 - `vaft/` et `video-swap-new/` conservés (scripts upstream d'origine, le combiné en dérive)
 - Poussé sur GitHub : [Endymi0n74/TwVodNoAdsJCed](https://github.com/Endymi0n74/TwVodNoAdsJCed)
+
+### v1.1.1 - fix double comptage vodsUnlocked + retry GQL
+- Dédoublonnage `vodsUnlocked` par `vodId` : le worker envoie `VodBypassed` avec le `vodId`, le contexte page garde un `Set` en session → re-fetch du player (switch qualité, retries) ne sur-compte plus
+- `buildVodPlaylist` utilise `gqlRequestWithRetry` (backoff 1s/2s/4s, 3 tentatives) au lieu du fetch GQL brut à un seul essai
+
+### v1.1.1 - panneau Stats + toggles indépendants (pubs / VODs), toast supprimé
+- Le bouton 📊 Stats ouvre un **mini-panneau déroulant** (positionné sous le bouton) : stats (pubs/VODs) + 2 toggles indépendants `📺 Blocage pubs` et `🎬 VODs sub-only` (pill ON/OFF, reload au clic) — le toast est supprimé
+- Kill-switches : `localStorage["twitchnosub-ads"]` et `["twitchnosub-vods"]` (défaut ON), injectés dans le blob Worker (`let tnsAdsEnabled/tnsVodsEnabled` à la construction)
+- Portes dans `hookWorkerFetch` : bypass usher et dé-mute cloudfront → `tnsVodsEnabled` ; `processM3U8` (stripping) + branche `/channel/hls/` (backup player) → `tnsAdsEnabled` (pass-through si OFF)
+- Portes page : `ForceAccessTokenPlayerType` (hookFetch GQL), `updateAdblockBanner`, `monitorPlayerBuffering` → `tnsAdsEnabled`
+- **Toggles à chaud (plus de reload)** : les flags page sont `let` (mutables), `applyFeatureFlag()` met à jour localStorage + flags page + envoie `UpdateFeatureFlags` aux workers via `postTwitchWorkerMessage` → le handler du blob met à jour `tnsAdsEnabled/tnsVodsEnabled` en direct, le pill change visuellement sans rechargement ; `monitorPlayerBuffering` s'arrête (early return) quand pubs OFF et est relancé par `applyFeatureFlag` quand on réactive
+
+### Fix boutons absents sur la page chaîne
+- Cause : `querySelector('[data-a-target="channel-actions"]')` prenait le PREMIER ⋮ du document → celui de la nav du haut (à côté de « Parcourir ») → les boutons étaient injectés au mauvais endroit sur la page chaîne (fonctionnait en plein écran car la nav est masquée)
+- Fix : `findContainer()` privilégie `share-button` (unique à la barre de la chaîne), prend le DERNIER match pour ⋮, remonte au conteneur commun ; fallbacks gift-button
+- L'observer (déconnecté après 1re injection) remplacé par un intervalle léger de 2s → ré-injection auto si Twitch re-rend le header (navigation SPA, sortie plein écran)
+- Log console `🔘 Boutons TwVodNoAdsJCed injectés` pour confirmer l'injection
+
+### Harness de test `combined/test-buildVodPlaylist.js`
+- Lancement : `node combined/test-buildVodPlaylist.js` (zéro dépendance)
+- Extrait les fonctions réelles du script au runtime (même mécanisme que le blob Worker : `fn.toString()`) → toujours synchronisé avec le code
+- Mock fetch CDN + round-trip GQL (postMessage) + retry testable ; vérifie les 3 branches (highlight/upload/standard) en usher v1 et v2, le format du playlist (SERVING-ID, CLUSTER, BANDWIDTH décrémenté, AUTOSELECT, IVS), les cas 403 et le retry GQL — 102 assertions

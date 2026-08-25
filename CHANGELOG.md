@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.1 (2026-08-25)
+- **Fix double comptage `vodsUnlocked`** : le worker envoie maintenant le `vodId` avec `VodBypassed`, le contexte page dédoublonne via un `Set` de session → les re-fetch du player (switch de qualité, retries) ne comptent plus la même VOD plusieurs fois
+- **Retry GQL dans `buildVodPlaylist`** : la requête de métadonnées VOD passe par `gqlRequestWithRetry` (backoff 1s/2s/4s, 3 tentatives) au lieu d'un fetch brut à un seul essai
+- **Fix boutons absents sur la page chaîne** : `share-button` devient l'ancrage principal (unique à la barre), le ⋮ prend le dernier match (la nav du haut en a un aussi), et l'injection est ré-essayée toutes les 2s → plus de boutons perdus au re-render du header
+- **Panneau Stats** : le bouton 📊 ouvre un menu déroulant (stats + toggles), le toast est supprimé
+- **Toggles indépendants pubs / VODs** : `twitchnosub-ads` / `twitchnosub-vods` (localStorage) → on peut garder le blocage des pubs tout en désactivant le bypass VOD (ou l'inverse), portes branchées dans le worker (usher/m3u8/channel-hls) et la page (token, bannière, buffering)
+- **Application à chaud (sans reload)** : les toggles envoient `UpdateFeatureFlags` aux workers via postMessage, les flags page sont mutables, le pill se met à jour instantanément — seul le bouton maître ⏻ ON/OFF recharge encore la page
+
 ## v1.1.0 (2026-08-25)
 - Renommage du projet en **TwVodNoAdsJCed** + publication GitHub
 - Header userscript mis à jour : `@name` = TwVodNoAdsJCed, `@namespace` / `@updateURL` / `@downloadURL` → `Endymi0n74/TwVodNoAdsJCed`, `@version` 1.1.0
