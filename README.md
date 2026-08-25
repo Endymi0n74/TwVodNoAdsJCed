@@ -71,7 +71,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 | `buildVodPlaylist()` | Bypass usher 403 → playlist CDN direct (qualités vérifiées, codec détecté) |
 | `-unmuted → -muted` | Dé-mute les playlists cloudfront |
 | `removeRestrictions()` | Nettoyage d'overlays résiduels (sélecteurs historiques) |
-| Boutons header + stats | UI minimale (toast stats, toggle on/off) + logs console |
+| Boutons header + panneau | Boutons 📊 Stats / ⏻ ON-OFF + panneau déroulant (stats + toggles pubs/VODs) + logs console |
 
 ## 📂 Contenu du repo
 
