@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TwVodNoAdsJCed
 // @namespace    https://github.com/Endymi0n74/TwVodNoAdsJCed
-// @version      1.1.1
+// @version      1.1.2
 // @description  Block Twitch ads + watch sub-only VODs (with unmute)
 // @updateURL    https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js
 // @downloadURL  https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js
@@ -1348,9 +1348,12 @@ function watchDOM() { var db = null; new MutationObserver(function(muts) { if (d
         } else if (flag === "twitchnosub-vods") {
             tnsVodsEnabled = enabled;
         }
-        // Applique à chaud dans tous les workers (blob) — plus de reload
+        // Applique à chaud dans tous les workers (blob) — plus de reload de page
         postTwitchWorkerMessage('UpdateFeatureFlags', { adsEnabled: tnsAdsEnabled, vodsEnabled: tnsVodsEnabled });
         console.log('%c🎛️ Pubs: ' + (tnsAdsEnabled ? 'ON' : 'OFF') + ' · VODs: ' + (tnsVodsEnabled ? 'ON' : 'OFF'), 'color:#9146FF');
+        // Recharge le player pour appliquer immédiatement : nouvelle requête usher/m3u8 →
+        // paywall (VODs OFF) ou pubs (pubs OFF) visibles tout de suite, sans attendre le prochain fetch
+        setTimeout(function() { doTwitchPlayerTask(false, true); }, 150);
     }
     function injectHeaderButtons(disabledOnly) {
         if (!document.getElementById("tns-hbtn-style")) {

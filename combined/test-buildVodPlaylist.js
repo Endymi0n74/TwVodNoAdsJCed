@@ -321,6 +321,107 @@ async function testGqlRetry() {
     assert(playlist.includes('index-dvr.m3u8'), 'playlist généré après retry');
 }
 
+// ─── Portes pubs/VODs de hookWorkerFetch (simulation du blob) ───
+function extractHook() {
+    const start = SCRIPT_SRC.indexOf('function hookWorkerFetch(');
+    let depth = 0;
+    let i = SCRIPT_SRC.indexOf('{', start);
+    for (; i < SCRIPT_SRC.length; i++) {
+        if (SCRIPT_SRC[i] === '{') depth++;
+        else if (SCRIPT_SRC[i] === '}') {
+            depth--;
+            if (depth === 0) break;
+        }
+    }
+    return SCRIPT_SRC.slice(start, i + 1);
+}
+
+function buildBlob(initialFlags) {
+    const scope = `
+        const pendingFetchRequests = new Map();
+        const AdSegmentCache = new Map();
+        let AdSignifier = 'stitched';
+        let StreamInfos = {};
+        let StreamInfosByUrl = {};
+        let HasTriggeredPlayerReload = false;
+        let V2API = false;
+        let SimulatedAdsDepth = 0;
+        let AllSegmentsAreAdSegments = false;
+        let GQLDeviceID = null;
+        let ClientID = 'x';
+        let AuthorizationHeader = null;
+        let ClientIntegrityHeader = null;
+        let ClientVersion = null;
+        let ClientSession = null;
+        const GQL_MAX_RETRIES = 3;
+        const GQL_BASE_DELAY = 1000;
+        let tnsAdsEnabled = ${initialFlags.ads};
+        let tnsVodsEnabled = ${initialFlags.vods};
+        function buildVodPlaylist() { return Promise.resolve(new Response('BY-PASSED-PLAYLIST', { status: 200 })); }
+        async function processM3U8(url, text) { return text.replace(/ADSEG\.ts/g, 'STRIPPED.ts'); }
+        ${extractHook()}
+        return {
+            hookWorkerFetch,
+            updateFlags: function(v) {
+                if (v && typeof v.adsEnabled === 'boolean') { tnsAdsEnabled = v.adsEnabled; }
+                if (v && typeof v.vodsEnabled === 'boolean') { tnsVodsEnabled = v.vodsEnabled; }
+            },
+            getFlags: function() { return { ads: tnsAdsEnabled, vods: tnsVodsEnabled }; }
+        };
+    `;
+    return new Function(scope)();
+}
+
+async function testGates() {
+    const blob = buildBlob({ ads: true, vods: true });
+    globalThis.fetch = (url) => {
+        url = String(url);
+        if (url.includes('usher.ttvnw.net/vod/')) return Promise.resolve(new Response('403', { status: 403 }));
+        if (url.endsWith('.m3u8')) {
+            const body = url.includes('cloudfront')
+                ? '#EXTM3U\n#EXTINF:2,\nseg-unmuted.ts\n'
+                : '#EXTM3U\n#EXTINF:2,\nADSEG.ts\n';
+            return Promise.resolve(new Response(body, { status: 200 }));
+        }
+        return Promise.resolve(new Response('nf', { status: 404 }));
+    };
+    blob.hookWorkerFetch();
+    const hookedFetch = globalThis.fetch;
+
+    console.log('  usher 403, VODs ON → bypass');
+    let r = await hookedFetch('https://usher.ttvnw.net/vod/123.m3u8', {});
+    assert((await r.text()) === 'BY-PASSED-PLAYLIST', 'buildVodPlaylist appelé (bypass)');
+
+    console.log('  VODs OFF (UpdateFeatureFlags) → 403 passthrough');
+    blob.updateFlags({ adsEnabled: true, vodsEnabled: false });
+    assert(blob.getFlags().vods === false, 'flag vods = false après updateFlags');
+    r = await hookedFetch('https://usher.ttvnw.net/vod/123.m3u8', {});
+    assert(r.status === 403, 'réponse 403 d’origine (pas de bypass)');
+
+    console.log('  m3u8 live avec pubs, ads ON → stripping');
+    r = await hookedFetch('https://video-edge-xxx.hls.ttvnw.net/foo.m3u8', {});
+    const txtOn = await r.text();
+    assert(!txtOn.includes('ADSEG.ts') && txtOn.includes('STRIPPED.ts'), 'segments pubs strippés');
+
+    console.log('  ads OFF (UpdateFeatureFlags) → m3u8 brut');
+    blob.updateFlags({ adsEnabled: false, vodsEnabled: false });
+    assert(blob.getFlags().ads === false, 'flag ads = false après updateFlags');
+    r = await hookedFetch('https://video-edge-xxx.hls.ttvnw.net/foo.m3u8', {});
+    assert((await r.text()).includes('ADSEG.ts'), 'segments pubs conservés (pas de stripping)');
+
+    console.log('  VODs ON : dé-mute cloudfront');
+    blob.updateFlags({ adsEnabled: false, vodsEnabled: true });
+    r = await hookedFetch('https://d2nvs319pecx5r.cloudfront.net/xxx.m3u8', {});
+    let vodTxt = await r.text();
+    assert(vodTxt.includes('seg-muted.ts') && !vodTxt.includes('-unmuted'), '-unmuted → -muted appliqué');
+
+    console.log('  VODs OFF : pas de dé-mute cloudfront');
+    blob.updateFlags({ adsEnabled: false, vodsEnabled: false });
+    r = await hookedFetch('https://d2nvs319pecx5r.cloudfront.net/xxx.m3u8', {});
+    vodTxt = await r.text();
+    assert(vodTxt.includes('seg-unmuted.ts'), '-unmuted conservé (dé-mute inactif)');
+}
+
 // ─── Lancement ───
 async function main() {
     const tests = [
@@ -335,7 +436,8 @@ async function main() {
         ['upload récent (≤7j) → standard', () => testUploadRecent()],
         ['métadonnées manquantes → 403', () => testMissingMetadata()],
         ['aucune qualité valide → 403', () => testNoQuality()],
-        ['retry GQL (1 échec puis succès)', () => testGqlRetry()]
+        ['retry GQL (1 échec puis succès)', () => testGqlRetry()],
+        ['portes pubs/VODs (simulation blob)', () => testGates()]
     ];
     for (const [name, fn] of tests) {
         console.log('\n▶ ' + name);

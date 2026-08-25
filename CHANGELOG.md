@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.2 (2026-08-25)
+- **Toggles appliqués immédiatement** : basculer pubs/VODs recharge maintenant le player (au lieu d'attendre le prochain fetch) → couper « VODs sub-only » affiche le paywall tout de suite, couper « Blocage pubs » fait repasser les pubs immédiatement
+- Harness étendu : portes pubs/VODs de `hookWorkerFetch` testées (bypass, stripping, dé-mute) — 110 assertions au total
+
 ## v1.1.1 (2026-08-25)
 - **Fix double comptage `vodsUnlocked`** : le worker envoie maintenant le `vodId` avec `VodBypassed`, le contexte page dédoublonne via un `Set` de session → les re-fetch du player (switch de qualité, retries) ne comptent plus la même VOD plusieurs fois
 - **Retry GQL dans `buildVodPlaylist`** : la requête de métadonnées VOD passe par `gqlRequestWithRetry` (backoff 1s/2s/4s, 3 tentatives) au lieu d'un fetch brut à un seul essai

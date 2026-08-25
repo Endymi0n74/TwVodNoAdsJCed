@@ -229,6 +229,11 @@ const workerStringReinsert = [
 - Dédoublonnage `vodsUnlocked` par `vodId` : le worker envoie `VodBypassed` avec le `vodId`, le contexte page garde un `Set` en session → re-fetch du player (switch qualité, retries) ne sur-compte plus
 - `buildVodPlaylist` utilise `gqlRequestWithRetry` (backoff 1s/2s/4s, 3 tentatives) au lieu du fetch GQL brut à un seul essai
 
+### v1.1.2 - toggles appliqués immédiatement (reload player)
+- Bug report : « quand je mets les toggles sur off j'ai toujours accès à tout » → les portes étaient CORRECTES (vérifié par simulation Node du blob, 8/8), mais l'effet n'était visible qu'au prochain fetch (une VOD chargée ne re-demande jamais usher tant qu'elle joue)
+- Fix : `applyFeatureFlag` déclenche `doTwitchPlayerTask(false, true)` (reload player) 150ms après le toggle → paywall/pubs immédiats
+- Harness étendu : section « portes pubs/VODs » (simulation du blob, vrai `hookWorkerFetch`) — 110 assertions
+
 ### v1.1.1 - panneau Stats + toggles indépendants (pubs / VODs), toast supprimé
 - Le bouton 📊 Stats ouvre un **mini-panneau déroulant** (positionné sous le bouton) : stats (pubs/VODs) + 2 toggles indépendants `📺 Blocage pubs` et `🎬 VODs sub-only` (pill ON/OFF, reload au clic) — le toast est supprimé
 - Kill-switches : `localStorage["twitchnosub-ads"]` et `["twitchnosub-vods"]` (défaut ON), injectés dans le blob Worker (`let tnsAdsEnabled/tnsVodsEnabled` à la construction)
