@@ -65,11 +65,9 @@
         'twitch',
         'isVariantA'// TwitchNoSub
     ];
-    const workerStringAllow = [];
     const workerStringReinsert = [
         'isVariantA',// TwitchNoSub (prior to (0.9))
-        'besuper/',// TwitchNoSub (0.9)
-        '${patch_url}'// TwitchNoSub (0.9.1)
+        'besuper/'// TwitchNoSub (0.9)
     ];
     function getCleanWorker(worker) {
         let root = null;
@@ -77,7 +75,7 @@
         let proto = worker;
         while (proto) {
             const workerString = proto.toString();
-            if (workerStringConflicts.some((x) => workerString.includes(x)) && !workerStringAllow.some((x) => workerString.includes(x))) {
+            if (workerStringConflicts.some((x) => workerString.includes(x))) {
                 if (parent !== null) {
                     Object.setPrototypeOf(parent, Object.getPrototypeOf(proto));
                 }
@@ -98,7 +96,6 @@
             const workerString = proto.toString();
             if (workerStringReinsert.some((x) => workerString.includes(x))) {
                 result.push(proto);
-            } else {
             }
             proto = Object.getPrototypeOf(proto);
         }
@@ -115,7 +112,6 @@
     function isValidWorker(worker) {
         const workerString = worker.toString();
         return !workerStringConflicts.some((x) => workerString.includes(x))
-            || workerStringAllow.some((x) => workerString.includes(x))
             || workerStringReinsert.some((x) => workerString.includes(x));
     }
     function hookWindowWorker() {
@@ -213,9 +209,6 @@
                             stats.adsBlocked++;
                             saveStats();
                             console.log('%c📺 Pub bloquée', 'color:#9146FF', '— total : ' + stats.adsBlocked);
-                        }
-                        if (!e.data.hasAds && !e.data.isStrippingAdSegments && stats.adsBlocked > 0) {
-                            
                         }
                         updateAdblockBanner(e.data);
                     } else if (e.data.key == 'VodBypassed') {
@@ -1288,9 +1281,6 @@
 var RESTRICTION_SELECTORS = [".video-preview-card-restriction",".video-preview-card__banner--sub-only",".pulse-card__card--restricted",'[data-a-target="sub-only-badge"]',".video-player__mandatory-login"];
 function removeRestrictions(root) { RESTRICTION_SELECTORS.forEach(function(sel) { var els = (root || document).querySelectorAll(sel); for (var i = 0; i < els.length; i++) els[i].remove(); }); }
 function watchDOM() { var db = null; new MutationObserver(function(muts) { if (db) cancelAnimationFrame(db); db = requestAnimationFrame(function() { for (var i = 0; i < muts.length; i++) { var ns = muts[i].addedNodes; for (var j = 0; j < ns.length; j++) { if (ns[j].nodeType === 1) removeRestrictions(ns[j]); } } }); }).observe(document.documentElement, { childList: true, subtree: true }); }
-
-
-    function isChannelWhitelisted(ch) { try { return JSON.parse(localStorage.getItem("twitchnosub-whitelist")||"[]").map(c=>c.toLowerCase()).includes(ch.toLowerCase()); } catch(e) { return false; } }
 
 
     const stats = {adsBlocked:0, vodsUnlocked:0};
