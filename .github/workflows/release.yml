@@ -2,29 +2,51 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check @version matches tag
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify version matches tag
         run: |
-          VERSION=$(grep -m1 '@version' combined/twitch-combined.user.js | awk '{print $2}')
-          TAG="${GITHUB_REF_NAME#v}"
-          if [ "$VERSION" != "$TAG" ]; then
-            echo "::error::@version ($VERSION) ne correspond pas au tag ($TAG)"
+          TAG=${GITHUB_REF_NAME#v}
+          SCRIPT_VERSION=$(grep -oP '@version\s+\K[\d.]+' combined/twitch-combined.user.js)
+          echo "Tag version: $TAG"
+          echo "Script version: $SCRIPT_VERSION"
+          if [ "$TAG" != "$SCRIPT_VERSION" ]; then
+            echo "❌ Version mismatch: tag $TAG != script @version $SCRIPT_VERSION"
             exit 1
           fi
-          echo "Version $VERSION OK"
+          echo "✅ Version OK: $TAG"
 
-      - name: Create Release
+      - name: Build userscript
+        run: node build.js
+
+      - name: Syntax check
+        run: node --check combined/twitch-combined.user.js
+
+      - name: Run tests
+        run: |
+          node combined/test-buildVodPlaylist.js
+          node combined/test-unit.js
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: combined/twitch-combined.user.js
+          tag_name: ${{ github.ref_name }}
+          name: TwVodNoAdsJCed ${{ github.ref_name }}
           generate_release_notes: true

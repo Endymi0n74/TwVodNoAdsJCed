@@ -2,25 +2,36 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [ master ]
   pull_request:
+    branches: [ master ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '26'
 
-      - name: Syntax check (userscript + harness)
-        run: |
-          node --check combined/twitch-combined.user.js
-          node --check combined/test-buildVodPlaylist.js
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run test harness
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Format check (Prettier)
+        run: npx prettier --check src/ build.js
+
+      - name: Syntax check (node --check)
+        run: node build.js && node --check combined/twitch-combined.user.js
+
+      - name: Run test harness (buildVodPlaylist)
         run: node combined/test-buildVodPlaylist.js
+
+      - name: Run unit tests (stripAdSegments, parseAttributes, hookFetch)
+        run: node combined/test-unit.js
