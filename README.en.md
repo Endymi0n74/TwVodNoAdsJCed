@@ -2,7 +2,7 @@
 
 [![Install with Tampermonkey](https://img.shields.io/badge/Install%20with-Tampermonkey-9146FF?style=for-the-badge)](https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js)
 
-![Version](https://img.shields.io/badge/version-1.1.3-9146FF?style=for-the-badge) ![Licence](https://img.shields.io/github/license/Endymi0n74/TwVodNoAdsJCed?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.1.4-9146FF?style=for-the-badge) ![Licence](https://img.shields.io/github/license/Endymi0n74/TwVodNoAdsJCed?style=for-the-badge)
 
 [🇫🇷 Français](README.md) · **🇬🇧 English**
 
@@ -15,7 +15,7 @@ Based on [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSolu
 - **Ad blocking** — hooks the Twitch Worker (vaft method): fetches a clean stream, removes ad segments when necessary, fixes buffering
 - **Sub-only VODs** — usher bypass: when `usher.ttvnw.net/vod/` returns a **403** (VOD reserved for subscribers), the script builds a direct CDN playlist from the GQL metadata (`seekPreviewsURL`) → the video starts playing
 - **Un-muting VODs** — rewriting `-unmuted` → `-muted` in the cloudfront playlists (gets the segments with the original audio)
-- **Buttons in the Twitch header** — `📊 Stats` (toast with the counters) and `⏻ ON/OFF` (enable/disable the script)
+- **Buttons in the Twitch header** — `📊 Stats` (drop-down panel with the counters) and `⏻ ON/OFF` (enable/disable the script)
 - **Stats in the console** — persistent counters (localStorage): ads blocked / VODs unlocked
 
 ## 📦 Installation — step-by-step guide
@@ -51,11 +51,11 @@ Based on [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSolu
   - **📊 Stats** — opens the **drop-down panel**: counters + toggles (see screenshot above)
   - **⏻ ON/OFF** — disables/re-enables the **whole** script (reload the page; the button stays accessible when OFF)
 - **The panel**:
-  - `📺 Blocage pubs` — **ON**: blocks live ads (clean stream). **OFF**: ads play normally again
-  - `🎬 VODs sub-only` — **ON**: unlocks subscriber-only VODs (+ un-mutes muted VODs). **OFF**: the Twitch paywall stays visible
+  - `📺 Ad blocking` — **ON**: blocks live ads (clean stream). **OFF**: ads play normally again
+  - `🎬 Sub-only VODs` — **ON**: unlocks subscriber-only VODs (+ un-mutes muted VODs). **OFF**: the Twitch paywall stays visible
   - The toggles apply **immediately** (the player reloads, or the page if needed) — no manual reload
   - ⚠️ **Clips and public VODs** always play, whatever the VODs toggle (nothing to unlock — normal)
-- **Console (F12)**: stats summary on load, then a log entry for each ad blocked (`📺 Pub bloquée`) and each VOD unlocked (`🎬 VOD sub-only débloquée`)
+- **Console (F12)**: stats summary on load, then a log entry for each ad blocked (`📺 Ad blocked`) and each VOD unlocked (`🎬 Sub-only VOD unlocked`)
 
 ## ⚠️ Warning
 
@@ -79,8 +79,10 @@ Based on [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSolu
 
 - `combined/twitch-combined.user.js` — **the script** (to install)
 - `combined/test-buildVodPlaylist.js` — Node test harness for the VOD bypass (mock fetch/GQL, 3 branches, playlist format) — `node combined/test-buildVodPlaylist.js`
+- `combined/test-unit.js` — unit tests (stripAdSegments, parseAttributes, hookFetch) — `node combined/test-unit.js`
 - `docs/panel.png` — screenshot of the panel for the README
 - `.github/workflows/` — **CI**: `node --check` + harness on every push, and automatic release on `v*` tag (script attached)
+- `src/` — modular source code (14 modules concatenated by `build.js`)
 - `vaft/`, `video-swap-new/` — original upstream scripts (the combined one derives from them)
 - `MEMORY.md` — development memory (rules, known bugs, backlog)
 - `CHANGELOG.md` — version history
@@ -90,7 +92,7 @@ Based on [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSolu
 ## ❓ FAQ — common errors & conflicts
 
 ### How do I check the installed version?
-- Tampermonkey → dashboard: the “Version” column shows the installed version (e.g. `1.1.3`).
+- Tampermonkey → dashboard: the “Version” column shows the installed version (e.g. `1.1.4`).
 - Compare it with the README version badge or the latest entry in the [CHANGELOG](CHANGELOG.md). If a newer version exists: **Update** (or reinstall from the installation URL).
 
 ### The script does nothing

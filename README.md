@@ -2,7 +2,7 @@
 
 [![Install with Tampermonkey](https://img.shields.io/badge/Install%20with-Tampermonkey-9146FF?style=for-the-badge)](https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js)
 
-![Version](https://img.shields.io/badge/version-1.1.3-9146FF?style=for-the-badge) ![Licence](https://img.shields.io/github/license/Endymi0n74/TwVodNoAdsJCed?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.1.4-9146FF?style=for-the-badge) ![Licence](https://img.shields.io/github/license/Endymi0n74/TwVodNoAdsJCed?style=for-the-badge)
 
 **🇫🇷 Français** · [🇬🇧 English](README.en.md)
 
@@ -15,7 +15,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 - **Blocage des pubs** — hook du Worker Twitch (méthode vaft) : récupère un stream propre, supprime les segments pub si nécessaire, corrige le buffering
 - **VODs sub-only** — bypass usher : quand `usher.ttvnw.net/vod/` renvoie un **403** (VOD réservée aux abonnés), le script construit un playlist CDN direct à partir des métadonnées GQL (`seekPreviewsURL`) → la vidéo se lance
 - **Dé-mute des VODs** — réécriture `-unmuted` → `-muted` dans les playlists cloudfront (récupère les segments avec le son d'origine)
-- **Boutons dans le header Twitch** — `📊 Stats` (toast avec les compteurs) et `⏻ ON/OFF` (activation/désactivation du script)
+- **Boutons dans le header Twitch** — `📊 Stats` (panneau déroulant avec les compteurs) et `⏻ ON/OFF` (activation/désactivation du script)
 - **Stats en console** — compteurs persistants (localStorage) : pubs bloquées / VODs débloquées
 
 ## 📦 Installation — guide pas à pas
@@ -79,8 +79,10 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 
 - `combined/twitch-combined.user.js` — **le script** (à installer)
 - `combined/test-buildVodPlaylist.js` — harness de test Node du bypass VOD (mock fetch/GQL, 3 branches, format playlist) — `node combined/test-buildVodPlaylist.js`
+- `combined/test-unit.js` — tests unitaires (stripAdSegments, parseAttributes, hookFetch) — `node combined/test-unit.js`
 - `docs/panel.png` — capture d'écran du panneau pour le README
 - `.github/workflows/` — **CI** : `node --check` + harness sur chaque push, et release automatique sur tag `v*` (script en pièce jointe)
+- `src/` — code source modulaire (14 modules concaténés par `build.js`)
 - `vaft/`, `video-swap-new/` — scripts upstream d'origine (le combiné en dérive)
 - `MEMORY.md` — mémoire de développement (règles, bugs connus, backlog)
 - `CHANGELOG.md` — historique des versions
@@ -90,7 +92,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 ## ❓ FAQ — erreurs courantes & conflits
 
 ### Comment vérifier la version installée ?
-- Tampermonkey → tableau de bord : la colonne « Version » affiche la version installée (ex. `1.1.3`).
+- Tampermonkey → tableau de bord : la colonne « Version » affiche la version installée (ex. `1.1.4`).
 - Comparez avec le badge version du README ou la dernière entrée du [CHANGELOG](CHANGELOG.md). Si une version plus récente existe : **Mettre à jour** (ou réinstaller depuis l'URL d'installation).
 
 ### Le script ne fait rien

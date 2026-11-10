@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.4 (2026-11-10)
+- **Refactor modulaire** : le script monolithique (~1 500 lignes) est découpé en 14 modules dans `src/` (déclarations d'options, GQL, tokens d'accès, fetch worker, worker utils, stripping pubs, player, fetch hook, stockage, UI, orchestration) + `build.js` pour concaténation → `combined/twitch-combined.user.js`
+- **Variables globales centralisées** dans `src/core/globals.js` (évite les erreurs de référence temporelle TDZ liées à l'ordre de concaténation)
+- **Injection des boutons header robuste** : `MutationObserver` + `setInterval` de secours (2s) avec timeout 30s, logs de diagnostic `[TwVodNoAdsJCed]` en console
+- **Tests unitaires** (`combined/test-unit.js`) : couverture de `stripAdSegments`, `parseAttributes`, `hookFetch` — 18 assertions
+- **CI GitHub Actions** : `.github/workflows/ci.yml` (lint + format + vérification syntaxe + 2 harness sur push/PR) et `.github/workflows/release.yml` (vérifie `@version` == tag, build, tests, release GH sur tag `v*`)
+- **JSDoc** sur toutes les fonctions publiques des 14 modules `src/`
+- **`getWasmWorkerJsAsync`** (fetch asynchrone) ajouté en complément du XHR synchrone (nécessaire dans le constructeur `new Worker()` de Twitch)
+
 ## v1.1.3 (2026-08-25)
 - **Toggles infaillibles** : si le reload du player échoue (player introuvable/en pause), la page se recharge automatiquement pour garantir l'application — plus aucun cas où le toggle semble ne rien faire
 - **Diagnostic** : le worker confirme l'application des flags (`FeatureFlagsAck` → log `✅ Flags appliqués dans le worker`), logs clairs à chaque étape du toggle
