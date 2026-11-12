@@ -34,11 +34,16 @@ function getPlayerAndState() {
     function findReactRootNode() {
         let reactRootNode = null;
         const rootNode = document.querySelector('#root');
-        if (rootNode && rootNode._reactRootContainer && rootNode._reactRootContainer._internalRoot && rootNode._reactRootContainer._internalRoot.current) {
+        if (
+            rootNode &&
+            rootNode._reactRootContainer &&
+            rootNode._reactRootContainer._internalRoot &&
+            rootNode._reactRootContainer._internalRoot.current
+        ) {
             reactRootNode = rootNode._reactRootContainer._internalRoot.current;
         }
         if (reactRootNode == null && rootNode != null) {
-            const containerName = Object.keys(rootNode).find(x => x.startsWith('__reactContainer'));
+            const containerName = Object.keys(rootNode).find((x) => x.startsWith('__reactContainer'));
             if (containerName != null) {
                 reactRootNode = rootNode[containerName];
             }
@@ -49,12 +54,15 @@ function getPlayerAndState() {
     if (!reactRootNode) {
         return null;
     }
-    let player = findReactNode(reactRootNode, node => node.setPlayerActive && node.props && node.props.mediaPlayerInstance);
+    let player = findReactNode(
+        reactRootNode,
+        (node) => node.setPlayerActive && node.props && node.props.mediaPlayerInstance
+    );
     player = player && player.props && player.props.mediaPlayerInstance ? player.props.mediaPlayerInstance : null;
     if (player?.playerInstance) {
         player = player.playerInstance;
     }
-    const playerState = findReactNode(reactRootNode, node => node.setSrc && node.setInitialPlaybackSettings);
+    const playerState = findReactNode(reactRootNode, (node) => node.setSrc && node.setInitialPlaybackSettings);
     return {
         player: player,
         state: playerState
@@ -109,11 +117,11 @@ function doTwitchPlayerTask(isPausePlay, isReload) {
             currentMutedLS = localStorage.getItem(lsKeyMuted);
             currentVolumeLS = localStorage.getItem(lsKeyVolume);
             if (localStorageHookFailed && player?.core?.state) {
-                localStorage.setItem(lsKeyMuted, JSON.stringify({default:player.core.state.muted}));
+                localStorage.setItem(lsKeyMuted, JSON.stringify({ default: player.core.state.muted }));
                 localStorage.setItem(lsKeyVolume, player.core.state.volume);
             }
             if (localStorageHookFailed && player?.core?.state?.quality?.group) {
-                localStorage.setItem(lsKeyQuality, JSON.stringify({default:player.core.state.quality.group}));
+                localStorage.setItem(lsKeyQuality, JSON.stringify({ default: player.core.state.quality.group }));
             }
         } catch {}
         console.log('Reloading Twitch player');
@@ -160,14 +168,19 @@ function updateAdblockBanner(data) {
         if (adBlockDiv == null) {
             adBlockDiv = document.createElement('div');
             adBlockDiv.className = 'adblock-overlay';
-            adBlockDiv.innerHTML = '<div class="player-adblock-notice" style="color: white; background-color: rgba(0, 0, 0, 0.8); position: absolute; top: 0px; left: 0px; padding: 5px;"><p></p></div>';
+            adBlockDiv.innerHTML =
+                '<div class="player-adblock-notice" style="color: white; background-color: rgba(0, 0, 0, 0.8); position: absolute; top: 0px; left: 0px; padding: 5px;"><p></p></div>';
             adBlockDiv.style.display = 'none';
             adBlockDiv.P = adBlockDiv.querySelector('p');
             playerRootDiv.appendChild(adBlockDiv);
         }
         if (adBlockDiv != null) {
             isActivelyStrippingAds = data.isStrippingAdSegments;
-            adBlockDiv.P.textContent = 'Blocking' + (data.isMidroll ? ' midroll' : '') + ' ads' + (data.isStrippingAdSegments ? ' (stripping)' : '');
+            adBlockDiv.P.textContent =
+                'Blocking' +
+                (data.isMidroll ? ' midroll' : '') +
+                ' ads' +
+                (data.isStrippingAdSegments ? ' (stripping)' : '');
             adBlockDiv.style.display = data.hasAds && playerBufferState.isLive ? 'block' : 'none';
         }
     }
@@ -183,14 +196,22 @@ function updateAdblockBanner(data) {
  * @returns {void}
  */
 function monitorPlayerBuffering() {
-    if (!tnsAdsEnabled) { return; }
+    if (!tnsAdsEnabled) {
+        return;
+    }
     if (playerForMonitoringBuffering) {
         try {
             const player = playerForMonitoringBuffering.player;
             const state = playerForMonitoringBuffering.state;
             if (!player.core) {
                 playerForMonitoringBuffering = null;
-            } else if (state.props?.content?.type === 'live' && !player.isPaused() && !player.getHTMLVideoElement()?.ended && playerBufferState.lastFixTime <= Date.now() - PlayerBufferingMinRepeatDelay && !isActivelyStrippingAds) {
+            } else if (
+                state.props?.content?.type === 'live' &&
+                !player.isPaused() &&
+                !player.getHTMLVideoElement()?.ended &&
+                playerBufferState.lastFixTime <= Date.now() - PlayerBufferingMinRepeatDelay &&
+                !isActivelyStrippingAds
+            ) {
                 const m3u8Url = player.core?.state?.path;
                 if (m3u8Url) {
                     const fileName = new URL(m3u8Url).pathname.split('/').pop();
@@ -210,7 +231,8 @@ function monitorPlayerBuffering() {
                 const bufferedPosition = player.core?.state?.bufferedPosition;
                 const bufferDuration = player.getBufferDuration();
                 if (position !== undefined && bufferedPosition !== undefined) {
-                    if (playerBufferState.hasStreamStarted &&
+                    if (
+                        playerBufferState.hasStreamStarted &&
                         (!PlayerBufferingPrerollCheckEnabled || position > PlayerBufferingPrerollCheckOffset) &&
                         (playerBufferState.position == position || bufferDuration < PlayerBufferingDangerZone) &&
                         playerBufferState.bufferedPosition == bufferedPosition &&
@@ -219,7 +241,14 @@ function monitorPlayerBuffering() {
                     ) {
                         playerBufferState.numSame++;
                         if (playerBufferState.numSame == PlayerBufferingSameStateCount) {
-                            console.log('Attempt to fix buffering position:' + playerBufferState.position + ' bufferedPosition:' + playerBufferState.bufferedPosition + ' bufferDuration:' + playerBufferState.bufferDuration);
+                            console.log(
+                                'Attempt to fix buffering position:' +
+                                    playerBufferState.position +
+                                    ' bufferedPosition:' +
+                                    playerBufferState.bufferedPosition +
+                                    ' bufferDuration:' +
+                                    playerBufferState.bufferDuration
+                            );
                             const isPausePlay = !PlayerBufferingDoPlayerReload;
                             const isReload = PlayerBufferingDoPlayerReload;
                             doTwitchPlayerTask(isPausePlay, isReload);

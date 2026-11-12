@@ -14,7 +14,7 @@
  */
 const workerStringConflicts = [
     'twitch',
-    'isVariantA'// TwitchNoSub
+    'isVariantA' // TwitchNoSub
 ];
 
 /**
@@ -22,8 +22,8 @@ const workerStringConflicts = [
  * @type {ReadonlyArray<string>}
  */
 const workerStringReinsert = [
-    'isVariantA',// TwitchNoSub (prior to 0.9)
-    'besuper/'// TwitchNoSub (0.9)
+    'isVariantA', // TwitchNoSub (prior to 0.9)
+    'besuper/' // TwitchNoSub (0.9)
 ];
 
 /**
@@ -109,8 +109,10 @@ function reinsertWorkers(worker, reinsert) {
  */
 function isValidWorker(worker) {
     const workerString = worker.toString();
-    return !workerStringConflicts.some((x) => workerString.includes(x))
-        || workerStringReinsert.some((x) => workerString.includes(x));
+    return (
+        !workerStringConflicts.some((x) => workerString.includes(x)) ||
+        workerStringReinsert.some((x) => workerString.includes(x))
+    );
 }
 
 /**
@@ -128,7 +130,7 @@ function isValidWorker(worker) {
 function getWasmWorkerJs(twitchBlobUrl) {
     const req = new XMLHttpRequest();
     req.open('GET', twitchBlobUrl, false);
-    req.overrideMimeType("text/javascript");
+    req.overrideMimeType('text/javascript');
     try {
         req.send();
     } catch (err) {
@@ -200,7 +202,7 @@ function hookWindowWorker() {
                 ${buildVodPlaylist.toString()}
                 ${isValidQuality.toString()}
                 ${createServingID.toString()}
-                const workerString = getWasmWorkerJs('${twitchBlobUrl.replaceAll("'", "%27")}');
+                const workerString = getWasmWorkerJs('${twitchBlobUrl.replaceAll("'", '%27')}');
                 declareOptions(self);
                 GQLDeviceID = ${GQLDeviceID ? "'" + GQLDeviceID + "'" : null};
                 AuthorizationHeader = ${AuthorizationHeader ? "'" + AuthorizationHeader + "'" : undefined};
@@ -268,21 +270,29 @@ function hookWindowWorker() {
                     updateAdblockBanner(e.data);
                 } else if (e.data.key == 'VodBypassed') {
                     if (e.data.vodId) {
-                        if (seenVodIds.has(e.data.vodId)) { return; }
+                        if (seenVodIds.has(e.data.vodId)) {
+                            return;
+                        }
                         seenVodIds.add(e.data.vodId);
                     }
                     stats.vodsUnlocked++;
                     saveStats();
                     console.log('%c🎬 VOD sub-only débloquée', 'color:#9146FF', '— total : ' + stats.vodsUnlocked);
                 } else if (e.data.key == 'FeatureFlagsAck') {
-                    console.log('%c✅ Flags appliqués dans le worker: pubs=' + (e.data.value.adsEnabled ? 'ON' : 'OFF') + ' · VODs=' + (e.data.value.vodsEnabled ? 'ON' : 'OFF'), 'color:#9146FF');
+                    console.log(
+                        '%c✅ Flags appliqués dans le worker: pubs=' +
+                            (e.data.value.adsEnabled ? 'ON' : 'OFF') +
+                            ' · VODs=' +
+                            (e.data.value.vodsEnabled ? 'ON' : 'OFF'),
+                        'color:#9146FF'
+                    );
                 } else if (e.data.key == 'PauseResumePlayer') {
                     doTwitchPlayerTask(true, false);
                 } else if (e.data.key == 'ReloadPlayer') {
                     doTwitchPlayerTask(false, true);
                 }
             });
-            this.addEventListener('message', async event => {
+            this.addEventListener('message', async (event) => {
                 if (event.data.key == 'FetchRequest') {
                     const fetchRequest = event.data.value;
                     const responseData = await handleWorkerFetchRequest(fetchRequest);
@@ -296,10 +306,10 @@ function hookWindowWorker() {
     };
     let workerInstance = reinsertWorkers(NewWorker, reinsert);
     Object.defineProperty(window, 'Worker', {
-        get: function() {
+        get: function () {
             return workerInstance;
         },
-        set: function(value) {
+        set: function (value) {
             if (isValidWorker(value)) {
                 workerInstance = value;
             } else {

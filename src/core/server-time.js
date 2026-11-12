@@ -29,7 +29,14 @@ function getServerTimeFromM3u8(encodingsM3u8) {
  */
 function replaceServerTimeInM3u8(encodingsM3u8, newServerTime) {
     if (V2API) {
-        return newServerTime ? encodingsM3u8.replace(/(#EXT-X-SESSION-DATA:DATA-ID="SERVER-TIME",VALUE=")[^"]+(")/, `$1${newServerTime}$2`) : encodingsM3u8;
+        return newServerTime
+            ? encodingsM3u8.replace(
+                  /(#EXT-X-SESSION-DATA:DATA-ID="SERVER-TIME",VALUE=")[^"]+(")/,
+                  `$1${newServerTime}$2`
+              )
+            : encodingsM3u8;
     }
-    return newServerTime ? encodingsM3u8.replace(new RegExp('(SERVER-TIME=")[0-9.]+"'), `SERVER-TIME="${newServerTime}"`) : encodingsM3u8;
+    return newServerTime
+        ? encodingsM3u8.replace(new RegExp('(SERVER-TIME=")[0-9.]+"'), `SERVER-TIME="${newServerTime}"`)
+        : encodingsM3u8;
 }

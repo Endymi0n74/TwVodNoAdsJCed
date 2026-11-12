@@ -18,9 +18,9 @@ function declareOptions(scope) {
     scope.ClientID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
     /** @type {Array<string>} Types de joueurs utilisés comme source de secours pendant les pubs */
     scope.BackupPlayerTypes = [
-        'embed',//Source
-        'popout',//Source
-        'autoplay',//360p
+        'embed', //Source
+        'popout', //Source
+        'autoplay' //360p
         //'picture-by-picture-CACHED'//360p (-CACHED is an internal suffix and is removed)
     ];
     /** @type {string} Type de joueur de fallback quand aucun backup n'est disponible */
@@ -36,7 +36,7 @@ function declareOptions(scope) {
     /** @type {number} Délai minimal (ms) entre deux requêtes de reload du player */
     scope.PlayerReloadMinimalRequestsTime = 1500;
     /** @type {number} Index du joueur utilisé pour les requêtes minimales pendant le reload */
-    scope.PlayerReloadMinimalRequestsPlayerIndex = 2;//autoplay
+    scope.PlayerReloadMinimalRequestsPlayerIndex = 2; //autoplay
     /** @type {boolean} Si true, le reload du player a déjà été déclenché */
     scope.HasTriggeredPlayerReload = false;
     /** @type {Array} Infos des streams (indexé par nom de chaîne) */

@@ -34,10 +34,10 @@ function gqlRequest(body, playerType) {
     let headers = {
         'Client-ID': ClientID,
         'X-Device-Id': GQLDeviceID,
-        'Authorization': AuthorizationHeader,
-        ...(ClientIntegrityHeader && {'Client-Integrity': ClientIntegrityHeader}),
-        ...(ClientVersion && {'Client-Version': ClientVersion}),
-        ...(ClientSession && {'Client-Session-Id': ClientSession})
+        Authorization: AuthorizationHeader,
+        ...(ClientIntegrityHeader && { 'Client-Integrity': ClientIntegrityHeader }),
+        ...(ClientVersion && { 'Client-Version': ClientVersion }),
+        ...(ClientSession && { 'Client-Session-Id': ClientSession })
     };
     return new Promise((resolve, reject) => {
         const requestId = Math.random().toString(36).substring(2, 15);
@@ -72,15 +72,17 @@ function gqlRequest(body, playerType) {
  */
 function gqlRequestWithRetry(body, playerType, attempt) {
     attempt = attempt || 0;
-    return gqlRequest(body, playerType).catch(function(err) {
+    return gqlRequest(body, playerType).catch(function (err) {
         if (attempt < GQL_MAX_RETRIES - 1) {
             var delay = GQL_BASE_DELAY * Math.pow(2, attempt);
-            console.log("GQL retry " + (attempt+1) + "/" + GQL_MAX_RETRIES + ": " + err.message);
-            return new Promise(function(r) { setTimeout(r, delay); }).then(function() {
+            console.log('GQL retry ' + (attempt + 1) + '/' + GQL_MAX_RETRIES + ': ' + err.message);
+            return new Promise(function (r) {
+                setTimeout(r, delay);
+            }).then(function () {
                 return gqlRequestWithRetry(body, playerType, attempt + 1);
             });
         }
-        console.error("GQL failed after " + GQL_MAX_RETRIES + " attempts: " + err.message);
+        console.error('GQL failed after ' + GQL_MAX_RETRIES + ' attempts: ' + err.message);
         throw err;
     });
 }

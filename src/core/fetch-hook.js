@@ -17,8 +17,8 @@ window.realFetch = window.fetch;
  * @returns {void}
  */
 function hookFetch() {
-    window.fetch = function(url, init, ...args) {
-        if (typeof url === "string") {
+    window.fetch = function (url, init, ...args) {
+        if (typeof url === 'string') {
             if (url.includes('gql')) {
                 let deviceId = init.headers['X-Device-Id'];
                 if (typeof deviceId !== 'string') {
@@ -28,40 +28,76 @@ function hookFetch() {
                     GQLDeviceID = deviceId;
                     postTwitchWorkerMessage('UpdateDeviceId', GQLDeviceID);
                 }
-                if (typeof init.headers['Client-Version'] === 'string' && init.headers['Client-Version'] !== ClientVersion) {
-                    postTwitchWorkerMessage('UpdateClientVersion', ClientVersion = init.headers['Client-Version']);
+                if (
+                    typeof init.headers['Client-Version'] === 'string' &&
+                    init.headers['Client-Version'] !== ClientVersion
+                ) {
+                    postTwitchWorkerMessage('UpdateClientVersion', (ClientVersion = init.headers['Client-Version']));
                 }
-                if (typeof init.headers['Client-Session-Id'] === 'string' && init.headers['Client-Session-Id'] !== ClientSession) {
-                    postTwitchWorkerMessage('UpdateClientSession', ClientSession = init.headers['Client-Session-Id']);
+                if (
+                    typeof init.headers['Client-Session-Id'] === 'string' &&
+                    init.headers['Client-Session-Id'] !== ClientSession
+                ) {
+                    postTwitchWorkerMessage('UpdateClientSession', (ClientSession = init.headers['Client-Session-Id']));
                 }
-                if (typeof init.headers['Client-Integrity'] === 'string' && init.headers['Client-Integrity'] !== ClientIntegrityHeader) {
-                    postTwitchWorkerMessage('UpdateClientIntegrityHeader', ClientIntegrityHeader = init.headers['Client-Integrity']);
+                if (
+                    typeof init.headers['Client-Integrity'] === 'string' &&
+                    init.headers['Client-Integrity'] !== ClientIntegrityHeader
+                ) {
+                    postTwitchWorkerMessage(
+                        'UpdateClientIntegrityHeader',
+                        (ClientIntegrityHeader = init.headers['Client-Integrity'])
+                    );
                 }
-                if (typeof init.headers['Authorization'] === 'string' && init.headers['Authorization'] !== AuthorizationHeader) {
-                    postTwitchWorkerMessage('UpdateAuthorizationHeader', AuthorizationHeader = init.headers['Authorization']);
+                if (
+                    typeof init.headers['Authorization'] === 'string' &&
+                    init.headers['Authorization'] !== AuthorizationHeader
+                ) {
+                    postTwitchWorkerMessage(
+                        'UpdateAuthorizationHeader',
+                        (AuthorizationHeader = init.headers['Authorization'])
+                    );
                 }
                 // Get rid of mini player above chat - TODO: Reject this locally instead of having server reject it
-                if (init && typeof init.body === 'string' && init.body.includes('PlaybackAccessToken') && init.body.includes('picture-by-picture')) {
+                if (
+                    init &&
+                    typeof init.body === 'string' &&
+                    init.body.includes('PlaybackAccessToken') &&
+                    init.body.includes('picture-by-picture')
+                ) {
                     init.body = '';
                 }
-                if (tnsAdsEnabled && ForceAccessTokenPlayerType && typeof init.body === 'string' && init.body.includes('PlaybackAccessToken')) {
+                if (
+                    tnsAdsEnabled &&
+                    ForceAccessTokenPlayerType &&
+                    typeof init.body === 'string' &&
+                    init.body.includes('PlaybackAccessToken')
+                ) {
                     let replacedPlayerType = '';
                     const newBody = JSON.parse(init.body);
                     if (Array.isArray(newBody)) {
                         for (let i = 0; i < newBody.length; i++) {
-                            if (newBody[i]?.variables?.playerType && newBody[i]?.variables?.playerType !== ForceAccessTokenPlayerType) {
+                            if (
+                                newBody[i]?.variables?.playerType &&
+                                newBody[i]?.variables?.playerType !== ForceAccessTokenPlayerType
+                            ) {
                                 replacedPlayerType = newBody[i].variables.playerType;
                                 newBody[i].variables.playerType = ForceAccessTokenPlayerType;
                             }
                         }
                     } else {
-                        if (newBody?.variables?.playerType && newBody?.variables?.playerType !== ForceAccessTokenPlayerType) {
+                        if (
+                            newBody?.variables?.playerType &&
+                            newBody?.variables?.playerType !== ForceAccessTokenPlayerType
+                        ) {
                             replacedPlayerType = newBody.variables.playerType;
                             newBody.variables.playerType = ForceAccessTokenPlayerType;
                         }
                     }
                     if (replacedPlayerType) {
-                        console.log(`Replaced '${replacedPlayerType}' player type with '${ForceAccessTokenPlayerType}' player type`);
+                        console.log(
+                            `Replaced '${replacedPlayerType}' player type with '${ForceAccessTokenPlayerType}' player type`
+                        );
                         init.body = JSON.stringify(newBody);
                     }
                 }
@@ -110,6 +146,6 @@ async function handleWorkerFetchRequest(fetchRequest) {
  */
 function postTwitchWorkerMessage(key, value) {
     twitchWorkers.forEach((worker) => {
-        worker.postMessage({key: key, value: value});
+        worker.postMessage({ key: key, value: value });
     });
 }

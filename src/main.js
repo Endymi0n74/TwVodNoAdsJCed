@@ -13,8 +13,16 @@
  * @type {number}
  */
 const ourTwitchAdSolutionsVersion = 1;
-if (typeof window.twitchAdSolutionsVersion !== 'undefined' && window.twitchAdSolutionsVersion >= ourTwitchAdSolutionsVersion) {
-    console.log("skipping vaft as there's another script active. ourVersion:" + ourTwitchAdSolutionsVersion + " activeVersion:" + window.twitchAdSolutionsVersion);
+if (
+    typeof window.twitchAdSolutionsVersion !== 'undefined' &&
+    window.twitchAdSolutionsVersion >= ourTwitchAdSolutionsVersion
+) {
+    console.log(
+        "skipping vaft as there's another script active. ourVersion:" +
+            ourTwitchAdSolutionsVersion +
+            ' activeVersion:' +
+            window.twitchAdSolutionsVersion
+    );
     window.twitchAdSolutionsVersion = ourTwitchAdSolutionsVersion;
     return;
 }
@@ -25,11 +33,11 @@ window.twitchAdSolutionsVersion = ourTwitchAdSolutionsVersion;
  * @type {ReadonlyArray<string>}
  */
 const RESTRICTION_SELECTORS = [
-    ".video-preview-card-restriction",
-    ".video-preview-card__banner--sub-only",
-    ".pulse-card__card--restricted",
+    '.video-preview-card-restriction',
+    '.video-preview-card__banner--sub-only',
+    '.pulse-card__card--restricted',
     '[data-a-target="sub-only-badge"]',
-    ".video-player__mandatory-login"
+    '.video-player__mandatory-login'
 ];
 
 /**
@@ -39,7 +47,7 @@ const RESTRICTION_SELECTORS = [
  * @returns {void}
  */
 function removeRestrictions(root) {
-    RESTRICTION_SELECTORS.forEach(function(sel) {
+    RESTRICTION_SELECTORS.forEach(function (sel) {
         var els = (root || document).querySelectorAll(sel);
         for (var i = 0; i < els.length; i++) {
             els[i].remove();
@@ -57,9 +65,9 @@ function removeRestrictions(root) {
  */
 function watchDOM() {
     var db = null;
-    new MutationObserver(function(muts) {
+    new MutationObserver(function (muts) {
         if (db) cancelAnimationFrame(db);
-        db = requestAnimationFrame(function() {
+        db = requestAnimationFrame(function () {
             for (var i = 0; i < muts.length; i++) {
                 var ns = muts[i].addedNodes;
                 for (var j = 0; j < ns.length; j++) {
@@ -95,13 +103,13 @@ function onContentLoaded() {
             }
         });
     } catch {}
-    const block = e => {
+    const block = (e) => {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
     };
     let wasVideoPlaying = true;
-    const visibilityChange = e => {
+    const visibilityChange = (e) => {
         const isChrome = typeof chrome !== 'undefined';
         const videos = document.getElementsByTagName('video');
         if (videos.length > 0) {
@@ -139,32 +147,26 @@ function onContentLoaded() {
     } catch {}
     // Hooks pour préserver volume / résolution lors d'un reload du player
     try {
-        const keysToCache = [
-            'video-quality',
-            'video-muted',
-            'volume',
-            'lowLatencyModeEnabled',
-            'persistenceEnabled'
-        ];
+        const keysToCache = ['video-quality', 'video-muted', 'volume', 'lowLatencyModeEnabled', 'persistenceEnabled'];
         const cachedValues = new Map();
         for (let i = 0; i < keysToCache.length; i++) {
             cachedValues.set(keysToCache[i], localStorage.getItem(keysToCache[i]));
         }
         const realSetItem = localStorage.setItem;
-        localStorage.setItem = function(key, value) {
+        localStorage.setItem = function (key, value) {
             if (cachedValues.has(key)) {
                 cachedValues.set(key, value);
             }
             realSetItem.apply(this, arguments);
         };
         const realGetItem = localStorage.getItem;
-        localStorage.getItem = function(key) {
+        localStorage.getItem = function (key) {
             if (cachedValues.has(key)) {
                 return cachedValues.get(key);
             }
             return realGetItem.apply(this, arguments);
         };
-        if (!localStorage.getItem.toString().includes(Object.keys({cachedValues})[0])) {
+        if (!localStorage.getItem.toString().includes(Object.keys({ cachedValues })[0])) {
             localStorageHookFailed = true;
         }
     } catch (err) {
@@ -191,7 +193,7 @@ watchDOM();
 console.log('[TwVodNoAdsJCed] watchDOM OK');
 
 if (!isEnabled) {
-    console.log("TwitchNoSub+Ads disabled");
+    console.log('TwitchNoSub+Ads disabled');
     injectHeaderButtons(true);
     return;
 }
@@ -204,10 +206,10 @@ if (PlayerBufferingFix && tnsAdsEnabled) {
     monitorPlayerBuffering();
 }
 
-if (document.readyState === "complete" || document.readyState === "loaded" || document.readyState === "interactive") {
+if (document.readyState === 'complete' || document.readyState === 'loaded' || document.readyState === 'interactive') {
     onContentLoaded();
 } else {
-    window.addEventListener("DOMContentLoaded", function() {
+    window.addEventListener('DOMContentLoaded', function () {
         onContentLoaded();
     });
 }

@@ -25,7 +25,7 @@ let localStorageHookFailed = false;
  * Statistiques persistantes (pubs bloquées / VODs débloquées).
  * @type {{adsBlocked: number, vodsUnlocked: number}}
  */
-const stats = {adsBlocked: 0, vodsUnlocked: 0};
+const stats = { adsBlocked: 0, vodsUnlocked: 0 };
 
 /**
  * Ensemble des IDs de VOD déjà débloquées (session en cours).
@@ -37,19 +37,19 @@ const seenVodIds = new Set();
  * Kill-switch pour le blocage de pubs.
  * @type {boolean}
  */
-let tnsAdsEnabled = localStorage.getItem("twitchnosub-ads") !== "false";
+let tnsAdsEnabled = localStorage.getItem('twitchnosub-ads') !== 'false';
 
 /**
  * Kill-switch pour le bypass VOD sub-only.
  * @type {boolean}
  */
-let tnsVodsEnabled = localStorage.getItem("twitchnosub-vods") !== "false";
+let tnsVodsEnabled = localStorage.getItem('twitchnosub-vods') !== 'false';
 
 /**
  * État global du script (ON/OFF via le bouton header).
  * @type {boolean}
  */
-let isEnabled = localStorage.getItem("twitchnosub-enabled") !== "false";
+let isEnabled = localStorage.getItem('twitchnosub-enabled') !== 'false';
 
 /**
  * Référence au player pour la surveillance du buffering.

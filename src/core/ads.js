@@ -28,7 +28,11 @@ function stripAdSegments(textStr, stripAllSegments, streamInfo) {
         line = line
             .replaceAll(/(X-TV-TWITCH-AD-URL=")(?:[^"]*)(")/g, `$1${newAdUrl}$2`)
             .replaceAll(/(X-TV-TWITCH-AD-CLICK-TRACKING-URL=")(?:[^"]*)(")/g, `$1${newAdUrl}$2`);
-        if (i < lines.length - 1 && line.startsWith('#EXTINF') && (!line.includes(',live') || stripAllSegments || AllSegmentsAreAdSegments)) {
+        if (
+            i < lines.length - 1 &&
+            line.startsWith('#EXTINF') &&
+            (!line.includes(',live') || stripAllSegments || AllSegmentsAreAdSegments)
+        ) {
             const segmentUrl = lines[i + 1];
             if (!AdSegmentCache.has(segmentUrl)) {
                 streamInfo.NumStrippedAdSegments++;
@@ -78,7 +82,10 @@ function getStreamUrlForResolution(encodingsM3u8, resolutionInfo) {
             const resolution = attributes['RESOLUTION'];
             const frameRate = attributes['FRAME-RATE'];
             if (resolution) {
-                if (resolution == resolutionInfo.Resolution && (!matchedResolutionUrl || (!matchedFrameRate && frameRate == resolutionInfo.FrameRate))) {
+                if (
+                    resolution == resolutionInfo.Resolution &&
+                    (!matchedResolutionUrl || (!matchedFrameRate && frameRate == resolutionInfo.FrameRate))
+                ) {
                     matchedResolutionUrl = encodingsLines[i + 1];
                     matchedFrameRate = frameRate == resolutionInfo.FrameRate;
                     if (matchedFrameRate) {
@@ -86,7 +93,7 @@ function getStreamUrlForResolution(encodingsM3u8, resolutionInfo) {
                     }
                 }
                 const [width, height] = resolution.split('x').map(Number);
-                const difference = Math.abs((width * height) - (targetWidth * targetHeight));
+                const difference = Math.abs(width * height - targetWidth * targetHeight);
                 if (difference < closestResolutionDifference) {
                     closestResolutionUrl = encodingsLines[i + 1];
                     closestResolutionDifference = difference;
@@ -159,7 +166,9 @@ async function processM3U8(url, textStr, realFetch) {
                 if (line.startsWith('#EXTINF') && lines.length > i + 1) {
                     if (!line.includes(',live') && !streamInfo.RequestedAds.has(lines[i + 1])) {
                         streamInfo.RequestedAds.add(lines[i + 1]);
-                        fetch(lines[i + 1]).then((response)=>{response.blob()});
+                        fetch(lines[i + 1]).then((response) => {
+                            response.blob();
+                        });
                         break;
                     }
                 }
@@ -169,7 +178,11 @@ async function processM3U8(url, textStr, realFetch) {
         let isHevc = false;
         if (currentResolution) {
             isHevc = currentResolution.Codecs.startsWith('hev') || currentResolution.Codecs.startsWith('hvc');
-            if (((isHevc && !SkipPlayerReloadOnHevc) || AlwaysReloadPlayerOnAd) && streamInfo.ModifiedM3U8 && !streamInfo.IsUsingModifiedM3U8) {
+            if (
+                ((isHevc && !SkipPlayerReloadOnHevc) || AlwaysReloadPlayerOnAd) &&
+                streamInfo.ModifiedM3U8 &&
+                !streamInfo.IsUsingModifiedM3U8
+            ) {
                 streamInfo.IsUsingModifiedM3U8 = true;
                 streamInfo.LastPlayerReload = Date.now();
                 postMessage({
@@ -185,7 +198,11 @@ async function processM3U8(url, textStr, realFetch) {
                 startIndex = PlayerReloadMinimalRequestsPlayerIndex;
                 isDoingMinimalRequests = true;
             }
-            for (let playerTypeIndex = startIndex; !backupM3u8 && playerTypeIndex < BackupPlayerTypes.length; playerTypeIndex++) {
+            for (
+                let playerTypeIndex = startIndex;
+                !backupM3u8 && playerTypeIndex < BackupPlayerTypes.length;
+                playerTypeIndex++
+            ) {
                 const playerType = BackupPlayerTypes[playerTypeIndex];
                 const realPlayerType = playerType.replace('-CACHED', '');
                 const isFullyCachedPlayerType = playerType != realPlayerType;
@@ -198,12 +215,20 @@ async function processM3U8(url, textStr, realFetch) {
                             const accessTokenResponse = await getAccessToken(streamInfo.ChannelName, realPlayerType);
                             if (accessTokenResponse.status === 200) {
                                 const accessToken = await accessTokenResponse.json();
-                                const urlInfo = new URL('https://usher.ttvnw.net/api/' + (V2API ? 'v2/' : '') + 'channel/hls/' + streamInfo.ChannelName + '.m3u8' + streamInfo.UsherParams);
+                                const urlInfo = new URL(
+                                    'https://usher.ttvnw.net/api/' +
+                                        (V2API ? 'v2/' : '') +
+                                        'channel/hls/' +
+                                        streamInfo.ChannelName +
+                                        '.m3u8' +
+                                        streamInfo.UsherParams
+                                );
                                 urlInfo.searchParams.set('sig', accessToken.data.streamPlaybackAccessToken.signature);
                                 urlInfo.searchParams.set('token', accessToken.data.streamPlaybackAccessToken.value);
                                 const encodingsM3u8Response = await realFetch(urlInfo.href);
                                 if (encodingsM3u8Response.status === 200) {
-                                    encodingsM3u8 = streamInfo.BackupEncodingsM3U8Cache[playerType] = await encodingsM3u8Response.text();
+                                    encodingsM3u8 = streamInfo.BackupEncodingsM3U8Cache[playerType] =
+                                        await encodingsM3u8Response.text();
                                 }
                             }
                         } catch (err) {}
@@ -218,7 +243,11 @@ async function processM3U8(url, textStr, realFetch) {
                                     if (playerType == FallbackPlayerType) {
                                         fallbackM3u8 = m3u8Text;
                                     }
-                                    if ((!m3u8Text.includes(AdSignifier) && (SimulatedAdsDepth == 0 || playerTypeIndex >= SimulatedAdsDepth - 1)) || (!fallbackM3u8 && playerTypeIndex >= BackupPlayerTypes.length - 1)) {
+                                    if (
+                                        (!m3u8Text.includes(AdSignifier) &&
+                                            (SimulatedAdsDepth == 0 || playerTypeIndex >= SimulatedAdsDepth - 1)) ||
+                                        (!fallbackM3u8 && playerTypeIndex >= BackupPlayerTypes.length - 1)
+                                    ) {
                                         backupPlayerType = playerType;
                                         backupM3u8 = m3u8Text;
                                         break;
@@ -249,7 +278,7 @@ async function processM3U8(url, textStr, realFetch) {
                 textStr = backupM3u8;
                 if (streamInfo.ActiveBackupPlayerType != backupPlayerType) {
                     streamInfo.ActiveBackupPlayerType = backupPlayerType;
-                    console.log(`Blocking${(streamInfo.IsMidroll ? ' midroll ' : ' ')}ads (${backupPlayerType})`);
+                    console.log(`Blocking${streamInfo.IsMidroll ? ' midroll ' : ' '}ads (${backupPlayerType})`);
                 }
             }
         } else {

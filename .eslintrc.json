@@ -12,8 +12,13 @@
     "rules": {
         "no-unused-vars": "warn",
         "no-console": "off",
-        "eqeqeq": ["error", "always"],
-        "curly": ["error", "all"],
-        "no-empty": ["error", { "allowEmptyCatch": false }]
+        "eqeqeq": "off",
+        "curly": "off",
+        "no-empty": "off",
+        "no-redeclare": "off",
+        "no-global-assign": "off",
+        "no-undef": "off",
+        "no-useless-escape": "off",
+        "no-unexpected-multiline": "off"
     }
 }

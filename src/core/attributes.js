@@ -15,13 +15,15 @@
  */
 function parseAttributes(str) {
     return Object.fromEntries(
-        str.split(/(?:^|,)((?:[^=]*)=(?:"[^"]*"|[^,]*))/)
-        .filter(Boolean)
-        .map(x => {
-            const idx = x.indexOf('=');
-            const key = x.substring(0, idx);
-            const value = x.substring(idx + 1);
-            const num = Number(value);
-            return [key, Number.isNaN(num) ? value.startsWith('"') ? JSON.parse(value) : value : num];
-        }));
+        str
+            .split(/(?:^|,)((?:[^=]*)=(?:"[^"]*"|[^,]*))/)
+            .filter(Boolean)
+            .map((x) => {
+                const idx = x.indexOf('=');
+                const key = x.substring(0, idx);
+                const value = x.substring(idx + 1);
+                const num = Number(value);
+                return [key, Number.isNaN(num) ? (value.startsWith('"') ? JSON.parse(value) : value) : num];
+            })
+    );
 }

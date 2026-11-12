@@ -44,7 +44,7 @@ let localStorageHookFailed = false;
  * Statistiques persistantes (pubs bloquées / VODs débloquées).
  * @type {{adsBlocked: number, vodsUnlocked: number}}
  */
-const stats = {adsBlocked: 0, vodsUnlocked: 0};
+const stats = { adsBlocked: 0, vodsUnlocked: 0 };
 
 /**
  * Ensemble des IDs de VOD déjà débloquées (session en cours).
@@ -56,19 +56,19 @@ const seenVodIds = new Set();
  * Kill-switch pour le blocage de pubs.
  * @type {boolean}
  */
-let tnsAdsEnabled = localStorage.getItem("twitchnosub-ads") !== "false";
+let tnsAdsEnabled = localStorage.getItem('twitchnosub-ads') !== 'false';
 
 /**
  * Kill-switch pour le bypass VOD sub-only.
  * @type {boolean}
  */
-let tnsVodsEnabled = localStorage.getItem("twitchnosub-vods") !== "false";
+let tnsVodsEnabled = localStorage.getItem('twitchnosub-vods') !== 'false';
 
 /**
  * État global du script (ON/OFF via le bouton header).
  * @type {boolean}
  */
-let isEnabled = localStorage.getItem("twitchnosub-enabled") !== "false";
+let isEnabled = localStorage.getItem('twitchnosub-enabled') !== 'false';
 
 /**
  * Référence au player pour la surveillance du buffering.
@@ -117,9 +117,9 @@ function declareOptions(scope) {
     scope.ClientID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
     /** @type {Array<string>} Types de joueurs utilisés comme source de secours pendant les pubs */
     scope.BackupPlayerTypes = [
-        'embed',//Source
-        'popout',//Source
-        'autoplay',//360p
+        'embed', //Source
+        'popout', //Source
+        'autoplay' //360p
         //'picture-by-picture-CACHED'//360p (-CACHED is an internal suffix and is removed)
     ];
     /** @type {string} Type de joueur de fallback quand aucun backup n'est disponible */
@@ -135,7 +135,7 @@ function declareOptions(scope) {
     /** @type {number} Délai minimal (ms) entre deux requêtes de reload du player */
     scope.PlayerReloadMinimalRequestsTime = 1500;
     /** @type {number} Index du joueur utilisé pour les requêtes minimales pendant le reload */
-    scope.PlayerReloadMinimalRequestsPlayerIndex = 2;//autoplay
+    scope.PlayerReloadMinimalRequestsPlayerIndex = 2; //autoplay
     /** @type {boolean} Si true, le reload du player a déjà été déclenché */
     scope.HasTriggeredPlayerReload = false;
     /** @type {Array} Infos des streams (indexé par nom de chaîne) */
@@ -217,9 +217,16 @@ function getServerTimeFromM3u8(encodingsM3u8) {
  */
 function replaceServerTimeInM3u8(encodingsM3u8, newServerTime) {
     if (V2API) {
-        return newServerTime ? encodingsM3u8.replace(/(#EXT-X-SESSION-DATA:DATA-ID="SERVER-TIME",VALUE=")[^"]+(")/, `$1${newServerTime}$2`) : encodingsM3u8;
+        return newServerTime
+            ? encodingsM3u8.replace(
+                  /(#EXT-X-SESSION-DATA:DATA-ID="SERVER-TIME",VALUE=")[^"]+(")/,
+                  `$1${newServerTime}$2`
+              )
+            : encodingsM3u8;
     }
-    return newServerTime ? encodingsM3u8.replace(new RegExp('(SERVER-TIME=")[0-9.]+"'), `SERVER-TIME="${newServerTime}"`) : encodingsM3u8;
+    return newServerTime
+        ? encodingsM3u8.replace(new RegExp('(SERVER-TIME=")[0-9.]+"'), `SERVER-TIME="${newServerTime}"`)
+        : encodingsM3u8;
 }
 
 
@@ -245,15 +252,17 @@ function replaceServerTimeInM3u8(encodingsM3u8, newServerTime) {
  */
 function parseAttributes(str) {
     return Object.fromEntries(
-        str.split(/(?:^|,)((?:[^=]*)=(?:"[^"]*"|[^,]*))/)
-        .filter(Boolean)
-        .map(x => {
-            const idx = x.indexOf('=');
-            const key = x.substring(0, idx);
-            const value = x.substring(idx + 1);
-            const num = Number(value);
-            return [key, Number.isNaN(num) ? value.startsWith('"') ? JSON.parse(value) : value : num];
-        }));
+        str
+            .split(/(?:^|,)((?:[^=]*)=(?:"[^"]*"|[^,]*))/)
+            .filter(Boolean)
+            .map((x) => {
+                const idx = x.indexOf('=');
+                const key = x.substring(0, idx);
+                const value = x.substring(idx + 1);
+                const num = Number(value);
+                return [key, Number.isNaN(num) ? (value.startsWith('"') ? JSON.parse(value) : value) : num];
+            })
+    );
 }
 
 
@@ -289,21 +298,25 @@ function createServingID() {
  * @returns {Promise<{codec: string}|null>} Objet { codec } si valide, null sinon
  */
 function isValidQuality(playlistUrl, realFetch) {
-    return realFetch(playlistUrl, { cache: 'force-cache' }).then(function(response) {
-        if (!response.ok) { return null; }
-        return response.text().then(function(data) {
+    return realFetch(playlistUrl, { cache: 'force-cache' }).then(function (response) {
+        if (!response.ok) {
+            return null;
+        }
+        return response.text().then(function (data) {
             if (data.includes('.ts')) {
                 return { codec: 'avc1.4D001E' };
             }
             if (data.includes('.mp4')) {
-                return realFetch(playlistUrl.replace('index-dvr.m3u8', 'init-0.mp4'), { cache: 'force-cache' }).then(function(mp4Request) {
-                    if (mp4Request.ok) {
-                        return mp4Request.text().then(function(content) {
-                            return { codec: content.includes('hev1') ? 'hev1.1.6.L93.B0' : 'avc1.4D001E' };
-                        });
+                return realFetch(playlistUrl.replace('index-dvr.m3u8', 'init-0.mp4'), { cache: 'force-cache' }).then(
+                    function (mp4Request) {
+                        if (mp4Request.ok) {
+                            return mp4Request.text().then(function (content) {
+                                return { codec: content.includes('hev1') ? 'hev1.1.6.L93.B0' : 'avc1.4D001E' };
+                            });
+                        }
+                        return { codec: 'hev1.1.6.L93.B0' };
                     }
-                    return { codec: 'hev1.1.6.L93.B0' };
-                });
+                );
             }
             return null;
         });
@@ -331,15 +344,24 @@ function isValidQuality(playlistUrl, realFetch) {
  * // status 200 avec un playlist #EXTM3U contenant les variantes de qualité
  */
 function buildVodPlaylist(url, realFetch) {
-    return (async function() {
-        const vodId = (new URL(url)).pathname.split('/').pop().replace(/\.m3u8.*$/, '');
+    return (async function () {
+        const vodId = new URL(url).pathname
+            .split('/')
+            .pop()
+            .replace(/\.m3u8.*$/, '');
         const isUsherV2 = url.includes('/vod/v2');
         console.log('Building bypass playlist for VOD ' + vodId);
         let gqlData;
         try {
-            const gqlResp = await gqlRequestWithRetry({
-                query: 'query { video(id: "' + vodId + '") { broadcastType, createdAt, seekPreviewsURL, owner { login } } }'
-            }, 'site');
+            const gqlResp = await gqlRequestWithRetry(
+                {
+                    query:
+                        'query { video(id: "' +
+                        vodId +
+                        '") { broadcastType, createdAt, seekPreviewsURL, owner { login } } }'
+                },
+                'site'
+            );
             gqlData = await gqlResp.json();
         } catch (err) {
             console.log('VOD bypass: GQL failed after retries: ' + err.message);
@@ -353,7 +375,12 @@ function buildVodPlaylist(url, realFetch) {
         const seekUrl = new URL(vodData.seekPreviewsURL);
         const domain = seekUrl.host;
         const paths = seekUrl.pathname.split('/');
-        const vodSpecialID = paths[paths.findIndex(function(p) { return p.includes('storyboards'); }) - 1];
+        const vodSpecialID =
+            paths[
+                paths.findIndex(function (p) {
+                    return p.includes('storyboards');
+                }) - 1
+            ];
         const broadcastType = vodData.broadcastType.toLowerCase();
         const created = new Date(vodData.createdAt);
         const daysSince = (new Date('2023-02-10').getTime() - created.getTime()) / (1000 * 3600 * 24);
@@ -364,9 +391,12 @@ function buildVodPlaylist(url, realFetch) {
             '720p60': { name: '720p60', resolution: '1280x720', frameRate: 60 },
             '1080p60': { name: '1080p60', resolution: '1920x1080', frameRate: 60 },
             '1440p60': { name: '1440p60', resolution: '2560x1440', frameRate: 60 },
-            'chunked': { name: 'chunked', resolution: 'chunked', frameRate: 60 }
+            chunked: { name: 'chunked', resolution: 'chunked', frameRate: 60 }
         };
-        let fakePlaylist = '#EXTM3U\n#EXT-X-TWITCH-INFO:ORIGIN="s3",B="false",REGION="EU",USER-IP="127.0.0.1",SERVING-ID="' + createServingID() + '",CLUSTER="cloudfront_vod",USER-COUNTRY="BE",MANIFEST-CLUSTER="cloudfront_vod"';
+        let fakePlaylist =
+            '#EXTM3U\n#EXT-X-TWITCH-INFO:ORIGIN="s3",B="false",REGION="EU",USER-IP="127.0.0.1",SERVING-ID="' +
+            createServingID() +
+            '",CLUSTER="cloudfront_vod",USER-COUNTRY="BE",MANIFEST-CLUSTER="cloudfront_vod"';
         let bitrate = 8534030;
         const resKeys = ['chunked', '1440p60', '1080p60', '720p60', '480p30', '360p30', '160p30'];
         for (let i = 0; i < resKeys.length; i++) {
@@ -375,7 +405,18 @@ function buildVodPlaylist(url, realFetch) {
             if (broadcastType === 'highlight') {
                 playlistUrl = 'https://' + domain + '/' + vodSpecialID + '/' + resKey + '/highlight-' + vodId + '.m3u8';
             } else if (broadcastType === 'upload' && daysSince > 7) {
-                playlistUrl = 'https://' + domain + '/' + vodData.owner.login + '/' + vodId + '/' + vodSpecialID + '/' + resKey + '/index-dvr.m3u8';
+                playlistUrl =
+                    'https://' +
+                    domain +
+                    '/' +
+                    vodData.owner.login +
+                    '/' +
+                    vodId +
+                    '/' +
+                    vodSpecialID +
+                    '/' +
+                    resKey +
+                    '/index-dvr.m3u8';
             } else {
                 playlistUrl = 'https://' + domain + '/' + vodSpecialID + '/' + resKey + '/index-dvr.m3u8';
             }
@@ -384,10 +425,46 @@ function buildVodPlaylist(url, realFetch) {
                 const resValue = defaultResolutions[resKey];
                 if (isUsherV2) {
                     const variantSource = resKey == 'chunked' ? 'source' : 'transcode';
-                    fakePlaylist += '\n#EXT-X-STREAM-INF:BANDWIDTH=' + bitrate + ',CODECS="' + quality.codec + ',mp4a.40.2",RESOLUTION=' + resValue.resolution + ',FRAME-RATE=' + resValue.frameRate + ',STABLE-VARIANT-ID="' + resKey + '",IVS-NAME="' + resValue.name + '",IVS-VARIANT-SOURCE="' + variantSource + '"\n' + playlistUrl;
+                    fakePlaylist +=
+                        '\n#EXT-X-STREAM-INF:BANDWIDTH=' +
+                        bitrate +
+                        ',CODECS="' +
+                        quality.codec +
+                        ',mp4a.40.2",RESOLUTION=' +
+                        resValue.resolution +
+                        ',FRAME-RATE=' +
+                        resValue.frameRate +
+                        ',STABLE-VARIANT-ID="' +
+                        resKey +
+                        '",IVS-NAME="' +
+                        resValue.name +
+                        '",IVS-VARIANT-SOURCE="' +
+                        variantSource +
+                        '"\n' +
+                        playlistUrl;
                 } else {
                     const enabled = resKey == 'chunked' ? 'YES' : 'NO';
-                    fakePlaylist += '\n#EXT-X-MEDIA:TYPE=VIDEO,GROUP-ID="' + resKey + '",NAME="' + resKey + '",AUTOSELECT=' + enabled + ',DEFAULT=' + enabled + '\n#EXT-X-STREAM-INF:BANDWIDTH=' + bitrate + ',CODECS="' + quality.codec + ',mp4a.40.2",RESOLUTION=' + resValue.resolution + ',VIDEO="' + resValue.name + '",FRAME-RATE=' + resValue.frameRate + '\n' + playlistUrl;
+                    fakePlaylist +=
+                        '\n#EXT-X-MEDIA:TYPE=VIDEO,GROUP-ID="' +
+                        resKey +
+                        '",NAME="' +
+                        resKey +
+                        '",AUTOSELECT=' +
+                        enabled +
+                        ',DEFAULT=' +
+                        enabled +
+                        '\n#EXT-X-STREAM-INF:BANDWIDTH=' +
+                        bitrate +
+                        ',CODECS="' +
+                        quality.codec +
+                        ',mp4a.40.2",RESOLUTION=' +
+                        resValue.resolution +
+                        ',VIDEO="' +
+                        resValue.name +
+                        '",FRAME-RATE=' +
+                        resValue.frameRate +
+                        '\n' +
+                        playlistUrl;
                 }
                 bitrate -= 100;
             }
@@ -398,7 +475,10 @@ function buildVodPlaylist(url, realFetch) {
         }
         console.log('VOD bypass: serving generated playlist for ' + vodId);
         postMessage({ key: 'VodBypassed', vodId: vodId });
-        return new Response(fakePlaylist, { status: 200, headers: { 'Content-Type': 'application/vnd.apple.mpegurl' } });
+        return new Response(fakePlaylist, {
+            status: 200,
+            headers: { 'Content-Type': 'application/vnd.apple.mpegurl' }
+        });
     })();
 }
 
@@ -444,10 +524,10 @@ function gqlRequest(body, playerType) {
     let headers = {
         'Client-ID': ClientID,
         'X-Device-Id': GQLDeviceID,
-        'Authorization': AuthorizationHeader,
-        ...(ClientIntegrityHeader && {'Client-Integrity': ClientIntegrityHeader}),
-        ...(ClientVersion && {'Client-Version': ClientVersion}),
-        ...(ClientSession && {'Client-Session-Id': ClientSession})
+        Authorization: AuthorizationHeader,
+        ...(ClientIntegrityHeader && { 'Client-Integrity': ClientIntegrityHeader }),
+        ...(ClientVersion && { 'Client-Version': ClientVersion }),
+        ...(ClientSession && { 'Client-Session-Id': ClientSession })
     };
     return new Promise((resolve, reject) => {
         const requestId = Math.random().toString(36).substring(2, 15);
@@ -482,15 +562,17 @@ function gqlRequest(body, playerType) {
  */
 function gqlRequestWithRetry(body, playerType, attempt) {
     attempt = attempt || 0;
-    return gqlRequest(body, playerType).catch(function(err) {
+    return gqlRequest(body, playerType).catch(function (err) {
         if (attempt < GQL_MAX_RETRIES - 1) {
             var delay = GQL_BASE_DELAY * Math.pow(2, attempt);
-            console.log("GQL retry " + (attempt+1) + "/" + GQL_MAX_RETRIES + ": " + err.message);
-            return new Promise(function(r) { setTimeout(r, delay); }).then(function() {
+            console.log('GQL retry ' + (attempt + 1) + '/' + GQL_MAX_RETRIES + ': ' + err.message);
+            return new Promise(function (r) {
+                setTimeout(r, delay);
+            }).then(function () {
                 return gqlRequestWithRetry(body, playerType, attempt + 1);
             });
         }
-        console.error("GQL failed after " + GQL_MAX_RETRIES + " attempts: " + err.message);
+        console.error('GQL failed after ' + GQL_MAX_RETRIES + ' attempts: ' + err.message);
         throw err;
     });
 }
@@ -526,14 +608,14 @@ function getAccessToken(channelName, playerType) {
             isLive: true,
             login: channelName,
             isVod: false,
-            vodID: "",
+            vodID: '',
             playerType: playerType,
             platform: playerType == 'autoplay' ? 'android' : 'web'
         },
         extensions: {
             persistedQuery: {
-                version:1,
-                sha256Hash:"ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9"
+                version: 1,
+                sha256Hash: 'ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9'
             }
         }
     };
@@ -581,16 +663,21 @@ function getAccessToken(channelName, playerType) {
 function hookWorkerFetch() {
     console.log('hookWorkerFetch (vaft)');
     const realFetch = fetch;
-    fetch = async function(url, options) {
+    fetch = async function (url, options) {
         if (typeof url === 'string') {
             if (AdSegmentCache.has(url)) {
-                return new Promise(function(resolve, reject) {
-                    const send = function() {
-                        return realFetch('data:video/mp4;base64,AAAAKGZ0eXBtcDQyAAAAAWlzb21tcDQyZGFzaGF2YzFpc282aGxzZgAABEltb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAYagAAAAAAABAAABAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAABqHRyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAURtZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAALuAAAAAAFXEAAAAAAAtaGRscgAAAAAAAAAAc291bgAAAAAAAAAAAAAAAFNvdW5kSGFuZGxlcgAAAADvbWluZgAAABBzbWhkAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAACzc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAALuAAAAAAAAzZXNkcwAAAAADgICAIgABAASAgIAUQBUAAAAAAAAAAAAAAAWAgIACEZAGgICAAQIAAAAQc3R0cwAAAAAAAAAAAAAAEHN0c2MAAAAAAAAAAAAAABRzdHN6AAAAAAAAAAAAAAAAAAAAEHN0Y28AAAAAAAAAAAAAAeV0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAoAAAAFoAAAAAAGBbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAA9CQAAAAABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABLG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAOxzdGJsAAAAoHN0c2QAAAAAAAAAAQAAAJBhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAoABaABIAAAASAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGP//AAAAOmF2Y0MBTUAe/+EAI2dNQB6WUoFAX/LgLUBAQFAAAD6AAA6mDgAAHoQAA9CW7y4KAQAEaOuPIAAAABBzdHRzAAAAAAAAAAAAAAAQc3RzYwAAAAAAAAAAAAAAFHN0c3oAAAAAAAAAAAAAAAAAAAAQc3RjbwAAAAAAAAAAAAAASG12ZXgAAAAgdHJleAAAAAAAAAABAAAAAQAAAC4AAAAAAoAAAAAAACB0cmV4AAAAAAAAAAIAAAABAACCNQAAAAACQAAA', options).then(function(response) {
-                            resolve(response);
-                        })['catch'](function(err) {
-                            reject(err);
-                        });
+                return new Promise(function (resolve, reject) {
+                    const send = function () {
+                        return realFetch(
+                            'data:video/mp4;base64,AAAAKGZ0eXBtcDQyAAAAAWlzb21tcDQyZGFzaGF2YzFpc282aGxzZgAABEltb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAYagAAAAAAABAAABAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAABqHRyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAURtZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAALuAAAAAAFXEAAAAAAAtaGRscgAAAAAAAAAAc291bgAAAAAAAAAAAAAAAFNvdW5kSGFuZGxlcgAAAADvbWluZgAAABBzbWhkAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAACzc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAALuAAAAAAAAzZXNkcwAAAAADgICAIgABAASAgIAUQBUAAAAAAAAAAAAAAAWAgIACEZAGgICAAQIAAAAQc3R0cwAAAAAAAAAAAAAAEHN0c2MAAAAAAAAAAAAAABRzdHN6AAAAAAAAAAAAAAAAAAAAEHN0Y28AAAAAAAAAAAAAAeV0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAoAAAAFoAAAAAAGBbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAA9CQAAAAABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABLG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAOxzdGJsAAAAoHN0c2QAAAAAAAAAAQAAAJBhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAoABaABIAAAASAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGP//AAAAOmF2Y0MBTUAe/+EAI2dNQB6WUoFAX/LgLUBAQFAAAD6AAA6mDgAAHoQAA9CW7y4KAQAEaOuPIAAAABBzdHRzAAAAAAAAAAAAAAAQc3RzYwAAAAAAAAAAAAAAFHN0c3oAAAAAAAAAAAAAAAAAAAAQc3RjbwAAAAAAAAAAAAAASG12ZXgAAAAgdHJleAAAAAAAAAABAAAAAQAAAC4AAAAAAoAAAAAAACB0cmV4AAAAAAAAAAIAAAABAACCNQAAAAACQAAA',
+                            options
+                        )
+                            .then(function (response) {
+                                resolve(response);
+                            })
+                            ['catch'](function (err) {
+                                reject(err);
+                            });
                     };
                     send();
                 });
@@ -598,29 +685,33 @@ function hookWorkerFetch() {
             url = url.trimEnd();
             if (url.includes('usher.ttvnw.net/vod/')) {
                 // VOD playlist: usher returns 403 for sub-only VODs, build a direct CDN playlist instead
-                return new Promise(function(resolve, reject) {
-                    const processAfter = async function(response) {
+                return new Promise(function (resolve, reject) {
+                    const processAfter = async function (response) {
                         if (response.status === 200 || !tnsVodsEnabled) {
                             // VODs désactivées : on laisse Twitch gérer (pas de bypass)
                             resolve(response);
                         } else {
-                            console.log('Usher VOD request failed (' + response.status + ') — building bypass playlist');
+                            console.log(
+                                'Usher VOD request failed (' + response.status + ') — building bypass playlist'
+                            );
                             resolve(await buildVodPlaylist(url, realFetch));
                         }
                     };
-                    const send = function() {
-                        return realFetch(url, options).then(function(response) {
-                            processAfter(response);
-                        })['catch'](function(err) {
-                            reject(err);
-                        });
+                    const send = function () {
+                        return realFetch(url, options)
+                            .then(function (response) {
+                                processAfter(response);
+                            })
+                            ['catch'](function (err) {
+                                reject(err);
+                            });
                     };
                     send();
                 });
             }
             if (url.endsWith('m3u8')) {
-                return new Promise(function(resolve, reject) {
-                    const processAfter = async function(response) {
+                return new Promise(function (resolve, reject) {
+                    const processAfter = async function (response) {
                         if (response.status === 200) {
                             let m3u8Text = await response.text();
                             if (url.includes('cloudfront') && tnsVodsEnabled) {
@@ -629,17 +720,21 @@ function hookWorkerFetch() {
                                 m3u8Text = m3u8Text.replace(/-unmuted/g, '-muted');
                             }
                             // Pubs désactivées : on renvoie le m3u8 brut, sans stripping
-                            resolve(new Response(tnsAdsEnabled ? await processM3U8(url, m3u8Text, realFetch) : m3u8Text));
+                            resolve(
+                                new Response(tnsAdsEnabled ? await processM3U8(url, m3u8Text, realFetch) : m3u8Text)
+                            );
                         } else {
                             resolve(response);
                         }
                     };
-                    const send = function() {
-                        return realFetch(url, options).then(function(response) {
-                            processAfter(response);
-                        })['catch'](function(err) {
-                            reject(err);
-                        });
+                    const send = function () {
+                        return realFetch(url, options)
+                            .then(function (response) {
+                                processAfter(response);
+                            })
+                            ['catch'](function (err) {
+                                reject(err);
+                            });
                     };
                     send();
                 });
@@ -649,21 +744,28 @@ function hookWorkerFetch() {
                     return realFetch(url, options);
                 }
                 V2API = url.includes('/api/v2/');
-                const channelName = (new URL(url)).pathname.match(/([^\/]+)(?=\.\w+$)/)[0];
+                const channelName = new URL(url).pathname.match(/([^\/]+)(?=\.\w+$)/)[0];
                 if (ForceAccessTokenPlayerType) {
                     // parent_domains is used to determine if the player is embeded and stripping it gets rid of fake ads
                     const tempUrl = new URL(url);
                     tempUrl.searchParams.delete('parent_domains');
                     url = tempUrl.toString();
                 }
-                return new Promise(function(resolve, reject) {
-                    const processAfter = async function(response) {
+                return new Promise(function (resolve, reject) {
+                    const processAfter = async function (response) {
                         if (response.status == 200) {
                             const encodingsM3u8 = await response.text();
                             const serverTime = getServerTimeFromM3u8(encodingsM3u8);
                             let streamInfo = StreamInfos[channelName];
-                            const cachedEncodingUrl = streamInfo != null && streamInfo.EncodingsM3U8 != null ? streamInfo.EncodingsM3U8.match(/^https:.*\.m3u8$/m) : null;
-                            if (streamInfo != null && streamInfo.EncodingsM3U8 != null && (!cachedEncodingUrl || (await realFetch(cachedEncodingUrl[0])).status !== 200)) {
+                            const cachedEncodingUrl =
+                                streamInfo != null && streamInfo.EncodingsM3U8 != null
+                                    ? streamInfo.EncodingsM3U8.match(/^https:.*\.m3u8$/m)
+                                    : null;
+                            if (
+                                streamInfo != null &&
+                                streamInfo.EncodingsM3U8 != null &&
+                                (!cachedEncodingUrl || (await realFetch(cachedEncodingUrl[0])).status !== 200)
+                            ) {
                                 // The cached encodings are dead (the stream probably restarted)
                                 streamInfo = null;
                             }
@@ -675,9 +777,9 @@ function hookWorkerFetch() {
                                     EncodingsM3U8: encodingsM3u8,
                                     ModifiedM3U8: null,
                                     IsUsingModifiedM3U8: false,
-                                    UsherParams: (new URL(url)).search,
+                                    UsherParams: new URL(url).search,
                                     RequestedAds: new Set(),
-                                    Urls: [],// xxx.m3u8 -> { Resolution: "284x160", FrameRate: 30.0 }
+                                    Urls: [], // xxx.m3u8 -> { Resolution: "284x160", FrameRate: 30.0 }
                                     ResolutionList: [],
                                     BackupEncodingsM3U8Cache: [],
                                     ActiveBackupPlayerType: null,
@@ -703,25 +805,65 @@ function hookWorkerFetch() {
                                         StreamInfosByUrl[lines[i + 1]] = streamInfo;
                                     }
                                 }
-                                const nonHevcResolutionList = streamInfo.ResolutionList.filter((element) => element.Codecs.startsWith('avc') || element.Codecs.startsWith('av0'));
-                                if (AlwaysReloadPlayerOnAd || (nonHevcResolutionList.length > 0 && streamInfo.ResolutionList.some((element) => element.Codecs.startsWith('hev') || element.Codecs.startsWith('hvc')) && !SkipPlayerReloadOnHevc)) {
+                                const nonHevcResolutionList = streamInfo.ResolutionList.filter(
+                                    (element) => element.Codecs.startsWith('avc') || element.Codecs.startsWith('av0')
+                                );
+                                if (
+                                    AlwaysReloadPlayerOnAd ||
+                                    (nonHevcResolutionList.length > 0 &&
+                                        streamInfo.ResolutionList.some(
+                                            (element) =>
+                                                element.Codecs.startsWith('hev') || element.Codecs.startsWith('hvc')
+                                        ) &&
+                                        !SkipPlayerReloadOnHevc)
+                                ) {
                                     if (nonHevcResolutionList.length > 0) {
                                         for (let i = 0; i < lines.length - 1; i++) {
                                             if (lines[i].startsWith('#EXT-X-STREAM-INF')) {
-                                                const resSettings = parseAttributes(lines[i].substring(lines[i].indexOf(':') + 1));
+                                                const resSettings = parseAttributes(
+                                                    lines[i].substring(lines[i].indexOf(':') + 1)
+                                                );
                                                 const codecsKey = 'CODECS';
-                                                if (resSettings[codecsKey].startsWith('hev') || resSettings[codecsKey].startsWith('hvc')) {
+                                                if (
+                                                    resSettings[codecsKey].startsWith('hev') ||
+                                                    resSettings[codecsKey].startsWith('hvc')
+                                                ) {
                                                     const oldResolution = resSettings['RESOLUTION'];
-                                                    const [targetWidth, targetHeight] = oldResolution.split('x').map(Number);
+                                                    const [targetWidth, targetHeight] = oldResolution
+                                                        .split('x')
+                                                        .map(Number);
                                                     const newResolutionInfo = nonHevcResolutionList.sort((a, b) => {
                                                         // TODO: Take into account 'Frame-Rate' when sorting (i.e. 1080p60 vs 1080p30)
-                                                        const [streamWidthA, streamHeightA] = a.Resolution.split('x').map(Number);
-                                                        const [streamWidthB, streamHeightB] = b.Resolution.split('x').map(Number);
-                                                        return Math.abs((streamWidthA * streamHeightA) - (targetWidth * targetHeight)) - Math.abs((streamWidthB * streamHeightB) - (targetWidth * targetHeight));
+                                                        const [streamWidthA, streamHeightA] =
+                                                            a.Resolution.split('x').map(Number);
+                                                        const [streamWidthB, streamHeightB] =
+                                                            b.Resolution.split('x').map(Number);
+                                                        return (
+                                                            Math.abs(
+                                                                streamWidthA * streamHeightA -
+                                                                    targetWidth * targetHeight
+                                                            ) -
+                                                            Math.abs(
+                                                                streamWidthB * streamHeightB -
+                                                                    targetWidth * targetHeight
+                                                            )
+                                                        );
                                                     })[0];
-                                                    console.log('ModifiedM3U8 swap ' + resSettings[codecsKey] + ' to ' + newResolutionInfo.Codecs + ' oldRes:' + oldResolution + ' newRes:' + newResolutionInfo.Resolution);
-                                                    lines[i] = lines[i].replace(/CODECS="[^"]+"/, `CODECS="${newResolutionInfo.Codecs}"`);
-                                                    lines[i + 1] = newResolutionInfo.Url + ' '.repeat(i + 1);// The stream doesn't load unless each url line is unique
+                                                    console.log(
+                                                        'ModifiedM3U8 swap ' +
+                                                            resSettings[codecsKey] +
+                                                            ' to ' +
+                                                            newResolutionInfo.Codecs +
+                                                            ' oldRes:' +
+                                                            oldResolution +
+                                                            ' newRes:' +
+                                                            newResolutionInfo.Resolution
+                                                    );
+                                                    lines[i] = lines[i].replace(
+                                                        /CODECS="[^"]+"/,
+                                                        `CODECS="${newResolutionInfo.Codecs}"`
+                                                    );
+                                                    lines[i + 1] = newResolutionInfo.Url + ' '.repeat(i + 1); // The stream doesn't load unless each url line is unique
                                                 }
                                             }
                                         }
@@ -732,17 +874,28 @@ function hookWorkerFetch() {
                                 }
                             }
                             streamInfo.LastPlayerReload = Date.now();
-                            resolve(new Response(replaceServerTimeInM3u8(streamInfo.IsUsingModifiedM3U8 ? streamInfo.ModifiedM3U8 : streamInfo.EncodingsM3U8, serverTime)));
+                            resolve(
+                                new Response(
+                                    replaceServerTimeInM3u8(
+                                        streamInfo.IsUsingModifiedM3U8
+                                            ? streamInfo.ModifiedM3U8
+                                            : streamInfo.EncodingsM3U8,
+                                        serverTime
+                                    )
+                                )
+                            );
                         } else {
                             resolve(response);
                         }
                     };
-                    const send = function() {
-                        return realFetch(url, options).then(function(response) {
-                            processAfter(response);
-                        })['catch'](function(err) {
-                            reject(err);
-                        });
+                    const send = function () {
+                        return realFetch(url, options)
+                            .then(function (response) {
+                                processAfter(response);
+                            })
+                            ['catch'](function (err) {
+                                reject(err);
+                            });
                     };
                     send();
                 });
@@ -774,7 +927,7 @@ function hookWorkerFetch() {
  */
 const workerStringConflicts = [
     'twitch',
-    'isVariantA'// TwitchNoSub
+    'isVariantA' // TwitchNoSub
 ];
 
 /**
@@ -782,8 +935,8 @@ const workerStringConflicts = [
  * @type {ReadonlyArray<string>}
  */
 const workerStringReinsert = [
-    'isVariantA',// TwitchNoSub (prior to 0.9)
-    'besuper/'// TwitchNoSub (0.9)
+    'isVariantA', // TwitchNoSub (prior to 0.9)
+    'besuper/' // TwitchNoSub (0.9)
 ];
 
 /**
@@ -869,8 +1022,10 @@ function reinsertWorkers(worker, reinsert) {
  */
 function isValidWorker(worker) {
     const workerString = worker.toString();
-    return !workerStringConflicts.some((x) => workerString.includes(x))
-        || workerStringReinsert.some((x) => workerString.includes(x));
+    return (
+        !workerStringConflicts.some((x) => workerString.includes(x)) ||
+        workerStringReinsert.some((x) => workerString.includes(x))
+    );
 }
 
 /**
@@ -888,7 +1043,7 @@ function isValidWorker(worker) {
 function getWasmWorkerJs(twitchBlobUrl) {
     const req = new XMLHttpRequest();
     req.open('GET', twitchBlobUrl, false);
-    req.overrideMimeType("text/javascript");
+    req.overrideMimeType('text/javascript');
     try {
         req.send();
     } catch (err) {
@@ -960,7 +1115,7 @@ function hookWindowWorker() {
                 ${buildVodPlaylist.toString()}
                 ${isValidQuality.toString()}
                 ${createServingID.toString()}
-                const workerString = getWasmWorkerJs('${twitchBlobUrl.replaceAll("'", "%27")}');
+                const workerString = getWasmWorkerJs('${twitchBlobUrl.replaceAll("'", '%27')}');
                 declareOptions(self);
                 GQLDeviceID = ${GQLDeviceID ? "'" + GQLDeviceID + "'" : null};
                 AuthorizationHeader = ${AuthorizationHeader ? "'" + AuthorizationHeader + "'" : undefined};
@@ -1028,21 +1183,29 @@ function hookWindowWorker() {
                     updateAdblockBanner(e.data);
                 } else if (e.data.key == 'VodBypassed') {
                     if (e.data.vodId) {
-                        if (seenVodIds.has(e.data.vodId)) { return; }
+                        if (seenVodIds.has(e.data.vodId)) {
+                            return;
+                        }
                         seenVodIds.add(e.data.vodId);
                     }
                     stats.vodsUnlocked++;
                     saveStats();
                     console.log('%c🎬 VOD sub-only débloquée', 'color:#9146FF', '— total : ' + stats.vodsUnlocked);
                 } else if (e.data.key == 'FeatureFlagsAck') {
-                    console.log('%c✅ Flags appliqués dans le worker: pubs=' + (e.data.value.adsEnabled ? 'ON' : 'OFF') + ' · VODs=' + (e.data.value.vodsEnabled ? 'ON' : 'OFF'), 'color:#9146FF');
+                    console.log(
+                        '%c✅ Flags appliqués dans le worker: pubs=' +
+                            (e.data.value.adsEnabled ? 'ON' : 'OFF') +
+                            ' · VODs=' +
+                            (e.data.value.vodsEnabled ? 'ON' : 'OFF'),
+                        'color:#9146FF'
+                    );
                 } else if (e.data.key == 'PauseResumePlayer') {
                     doTwitchPlayerTask(true, false);
                 } else if (e.data.key == 'ReloadPlayer') {
                     doTwitchPlayerTask(false, true);
                 }
             });
-            this.addEventListener('message', async event => {
+            this.addEventListener('message', async (event) => {
                 if (event.data.key == 'FetchRequest') {
                     const fetchRequest = event.data.value;
                     const responseData = await handleWorkerFetchRequest(fetchRequest);
@@ -1056,10 +1219,10 @@ function hookWindowWorker() {
     };
     let workerInstance = reinsertWorkers(NewWorker, reinsert);
     Object.defineProperty(window, 'Worker', {
-        get: function() {
+        get: function () {
             return workerInstance;
         },
-        set: function(value) {
+        set: function (value) {
             if (isValidWorker(value)) {
                 workerInstance = value;
             } else {
@@ -1105,7 +1268,11 @@ function stripAdSegments(textStr, stripAllSegments, streamInfo) {
         line = line
             .replaceAll(/(X-TV-TWITCH-AD-URL=")(?:[^"]*)(")/g, `$1${newAdUrl}$2`)
             .replaceAll(/(X-TV-TWITCH-AD-CLICK-TRACKING-URL=")(?:[^"]*)(")/g, `$1${newAdUrl}$2`);
-        if (i < lines.length - 1 && line.startsWith('#EXTINF') && (!line.includes(',live') || stripAllSegments || AllSegmentsAreAdSegments)) {
+        if (
+            i < lines.length - 1 &&
+            line.startsWith('#EXTINF') &&
+            (!line.includes(',live') || stripAllSegments || AllSegmentsAreAdSegments)
+        ) {
             const segmentUrl = lines[i + 1];
             if (!AdSegmentCache.has(segmentUrl)) {
                 streamInfo.NumStrippedAdSegments++;
@@ -1155,7 +1322,10 @@ function getStreamUrlForResolution(encodingsM3u8, resolutionInfo) {
             const resolution = attributes['RESOLUTION'];
             const frameRate = attributes['FRAME-RATE'];
             if (resolution) {
-                if (resolution == resolutionInfo.Resolution && (!matchedResolutionUrl || (!matchedFrameRate && frameRate == resolutionInfo.FrameRate))) {
+                if (
+                    resolution == resolutionInfo.Resolution &&
+                    (!matchedResolutionUrl || (!matchedFrameRate && frameRate == resolutionInfo.FrameRate))
+                ) {
                     matchedResolutionUrl = encodingsLines[i + 1];
                     matchedFrameRate = frameRate == resolutionInfo.FrameRate;
                     if (matchedFrameRate) {
@@ -1163,7 +1333,7 @@ function getStreamUrlForResolution(encodingsM3u8, resolutionInfo) {
                     }
                 }
                 const [width, height] = resolution.split('x').map(Number);
-                const difference = Math.abs((width * height) - (targetWidth * targetHeight));
+                const difference = Math.abs(width * height - targetWidth * targetHeight);
                 if (difference < closestResolutionDifference) {
                     closestResolutionUrl = encodingsLines[i + 1];
                     closestResolutionDifference = difference;
@@ -1236,7 +1406,9 @@ async function processM3U8(url, textStr, realFetch) {
                 if (line.startsWith('#EXTINF') && lines.length > i + 1) {
                     if (!line.includes(',live') && !streamInfo.RequestedAds.has(lines[i + 1])) {
                         streamInfo.RequestedAds.add(lines[i + 1]);
-                        fetch(lines[i + 1]).then((response)=>{response.blob()});
+                        fetch(lines[i + 1]).then((response) => {
+                            response.blob();
+                        });
                         break;
                     }
                 }
@@ -1246,7 +1418,11 @@ async function processM3U8(url, textStr, realFetch) {
         let isHevc = false;
         if (currentResolution) {
             isHevc = currentResolution.Codecs.startsWith('hev') || currentResolution.Codecs.startsWith('hvc');
-            if (((isHevc && !SkipPlayerReloadOnHevc) || AlwaysReloadPlayerOnAd) && streamInfo.ModifiedM3U8 && !streamInfo.IsUsingModifiedM3U8) {
+            if (
+                ((isHevc && !SkipPlayerReloadOnHevc) || AlwaysReloadPlayerOnAd) &&
+                streamInfo.ModifiedM3U8 &&
+                !streamInfo.IsUsingModifiedM3U8
+            ) {
                 streamInfo.IsUsingModifiedM3U8 = true;
                 streamInfo.LastPlayerReload = Date.now();
                 postMessage({
@@ -1262,7 +1438,11 @@ async function processM3U8(url, textStr, realFetch) {
                 startIndex = PlayerReloadMinimalRequestsPlayerIndex;
                 isDoingMinimalRequests = true;
             }
-            for (let playerTypeIndex = startIndex; !backupM3u8 && playerTypeIndex < BackupPlayerTypes.length; playerTypeIndex++) {
+            for (
+                let playerTypeIndex = startIndex;
+                !backupM3u8 && playerTypeIndex < BackupPlayerTypes.length;
+                playerTypeIndex++
+            ) {
                 const playerType = BackupPlayerTypes[playerTypeIndex];
                 const realPlayerType = playerType.replace('-CACHED', '');
                 const isFullyCachedPlayerType = playerType != realPlayerType;
@@ -1275,12 +1455,20 @@ async function processM3U8(url, textStr, realFetch) {
                             const accessTokenResponse = await getAccessToken(streamInfo.ChannelName, realPlayerType);
                             if (accessTokenResponse.status === 200) {
                                 const accessToken = await accessTokenResponse.json();
-                                const urlInfo = new URL('https://usher.ttvnw.net/api/' + (V2API ? 'v2/' : '') + 'channel/hls/' + streamInfo.ChannelName + '.m3u8' + streamInfo.UsherParams);
+                                const urlInfo = new URL(
+                                    'https://usher.ttvnw.net/api/' +
+                                        (V2API ? 'v2/' : '') +
+                                        'channel/hls/' +
+                                        streamInfo.ChannelName +
+                                        '.m3u8' +
+                                        streamInfo.UsherParams
+                                );
                                 urlInfo.searchParams.set('sig', accessToken.data.streamPlaybackAccessToken.signature);
                                 urlInfo.searchParams.set('token', accessToken.data.streamPlaybackAccessToken.value);
                                 const encodingsM3u8Response = await realFetch(urlInfo.href);
                                 if (encodingsM3u8Response.status === 200) {
-                                    encodingsM3u8 = streamInfo.BackupEncodingsM3U8Cache[playerType] = await encodingsM3u8Response.text();
+                                    encodingsM3u8 = streamInfo.BackupEncodingsM3U8Cache[playerType] =
+                                        await encodingsM3u8Response.text();
                                 }
                             }
                         } catch (err) {}
@@ -1295,7 +1483,11 @@ async function processM3U8(url, textStr, realFetch) {
                                     if (playerType == FallbackPlayerType) {
                                         fallbackM3u8 = m3u8Text;
                                     }
-                                    if ((!m3u8Text.includes(AdSignifier) && (SimulatedAdsDepth == 0 || playerTypeIndex >= SimulatedAdsDepth - 1)) || (!fallbackM3u8 && playerTypeIndex >= BackupPlayerTypes.length - 1)) {
+                                    if (
+                                        (!m3u8Text.includes(AdSignifier) &&
+                                            (SimulatedAdsDepth == 0 || playerTypeIndex >= SimulatedAdsDepth - 1)) ||
+                                        (!fallbackM3u8 && playerTypeIndex >= BackupPlayerTypes.length - 1)
+                                    ) {
                                         backupPlayerType = playerType;
                                         backupM3u8 = m3u8Text;
                                         break;
@@ -1326,7 +1518,7 @@ async function processM3U8(url, textStr, realFetch) {
                 textStr = backupM3u8;
                 if (streamInfo.ActiveBackupPlayerType != backupPlayerType) {
                     streamInfo.ActiveBackupPlayerType = backupPlayerType;
-                    console.log(`Blocking${(streamInfo.IsMidroll ? ' midroll ' : ' ')}ads (${backupPlayerType})`);
+                    console.log(`Blocking${streamInfo.IsMidroll ? ' midroll ' : ' '}ads (${backupPlayerType})`);
                 }
             }
         } else {
@@ -1410,11 +1602,16 @@ function getPlayerAndState() {
     function findReactRootNode() {
         let reactRootNode = null;
         const rootNode = document.querySelector('#root');
-        if (rootNode && rootNode._reactRootContainer && rootNode._reactRootContainer._internalRoot && rootNode._reactRootContainer._internalRoot.current) {
+        if (
+            rootNode &&
+            rootNode._reactRootContainer &&
+            rootNode._reactRootContainer._internalRoot &&
+            rootNode._reactRootContainer._internalRoot.current
+        ) {
             reactRootNode = rootNode._reactRootContainer._internalRoot.current;
         }
         if (reactRootNode == null && rootNode != null) {
-            const containerName = Object.keys(rootNode).find(x => x.startsWith('__reactContainer'));
+            const containerName = Object.keys(rootNode).find((x) => x.startsWith('__reactContainer'));
             if (containerName != null) {
                 reactRootNode = rootNode[containerName];
             }
@@ -1425,12 +1622,15 @@ function getPlayerAndState() {
     if (!reactRootNode) {
         return null;
     }
-    let player = findReactNode(reactRootNode, node => node.setPlayerActive && node.props && node.props.mediaPlayerInstance);
+    let player = findReactNode(
+        reactRootNode,
+        (node) => node.setPlayerActive && node.props && node.props.mediaPlayerInstance
+    );
     player = player && player.props && player.props.mediaPlayerInstance ? player.props.mediaPlayerInstance : null;
     if (player?.playerInstance) {
         player = player.playerInstance;
     }
-    const playerState = findReactNode(reactRootNode, node => node.setSrc && node.setInitialPlaybackSettings);
+    const playerState = findReactNode(reactRootNode, (node) => node.setSrc && node.setInitialPlaybackSettings);
     return {
         player: player,
         state: playerState
@@ -1485,11 +1685,11 @@ function doTwitchPlayerTask(isPausePlay, isReload) {
             currentMutedLS = localStorage.getItem(lsKeyMuted);
             currentVolumeLS = localStorage.getItem(lsKeyVolume);
             if (localStorageHookFailed && player?.core?.state) {
-                localStorage.setItem(lsKeyMuted, JSON.stringify({default:player.core.state.muted}));
+                localStorage.setItem(lsKeyMuted, JSON.stringify({ default: player.core.state.muted }));
                 localStorage.setItem(lsKeyVolume, player.core.state.volume);
             }
             if (localStorageHookFailed && player?.core?.state?.quality?.group) {
-                localStorage.setItem(lsKeyQuality, JSON.stringify({default:player.core.state.quality.group}));
+                localStorage.setItem(lsKeyQuality, JSON.stringify({ default: player.core.state.quality.group }));
             }
         } catch {}
         console.log('Reloading Twitch player');
@@ -1536,14 +1736,19 @@ function updateAdblockBanner(data) {
         if (adBlockDiv == null) {
             adBlockDiv = document.createElement('div');
             adBlockDiv.className = 'adblock-overlay';
-            adBlockDiv.innerHTML = '<div class="player-adblock-notice" style="color: white; background-color: rgba(0, 0, 0, 0.8); position: absolute; top: 0px; left: 0px; padding: 5px;"><p></p></div>';
+            adBlockDiv.innerHTML =
+                '<div class="player-adblock-notice" style="color: white; background-color: rgba(0, 0, 0, 0.8); position: absolute; top: 0px; left: 0px; padding: 5px;"><p></p></div>';
             adBlockDiv.style.display = 'none';
             adBlockDiv.P = adBlockDiv.querySelector('p');
             playerRootDiv.appendChild(adBlockDiv);
         }
         if (adBlockDiv != null) {
             isActivelyStrippingAds = data.isStrippingAdSegments;
-            adBlockDiv.P.textContent = 'Blocking' + (data.isMidroll ? ' midroll' : '') + ' ads' + (data.isStrippingAdSegments ? ' (stripping)' : '');
+            adBlockDiv.P.textContent =
+                'Blocking' +
+                (data.isMidroll ? ' midroll' : '') +
+                ' ads' +
+                (data.isStrippingAdSegments ? ' (stripping)' : '');
             adBlockDiv.style.display = data.hasAds && playerBufferState.isLive ? 'block' : 'none';
         }
     }
@@ -1559,14 +1764,22 @@ function updateAdblockBanner(data) {
  * @returns {void}
  */
 function monitorPlayerBuffering() {
-    if (!tnsAdsEnabled) { return; }
+    if (!tnsAdsEnabled) {
+        return;
+    }
     if (playerForMonitoringBuffering) {
         try {
             const player = playerForMonitoringBuffering.player;
             const state = playerForMonitoringBuffering.state;
             if (!player.core) {
                 playerForMonitoringBuffering = null;
-            } else if (state.props?.content?.type === 'live' && !player.isPaused() && !player.getHTMLVideoElement()?.ended && playerBufferState.lastFixTime <= Date.now() - PlayerBufferingMinRepeatDelay && !isActivelyStrippingAds) {
+            } else if (
+                state.props?.content?.type === 'live' &&
+                !player.isPaused() &&
+                !player.getHTMLVideoElement()?.ended &&
+                playerBufferState.lastFixTime <= Date.now() - PlayerBufferingMinRepeatDelay &&
+                !isActivelyStrippingAds
+            ) {
                 const m3u8Url = player.core?.state?.path;
                 if (m3u8Url) {
                     const fileName = new URL(m3u8Url).pathname.split('/').pop();
@@ -1586,7 +1799,8 @@ function monitorPlayerBuffering() {
                 const bufferedPosition = player.core?.state?.bufferedPosition;
                 const bufferDuration = player.getBufferDuration();
                 if (position !== undefined && bufferedPosition !== undefined) {
-                    if (playerBufferState.hasStreamStarted &&
+                    if (
+                        playerBufferState.hasStreamStarted &&
                         (!PlayerBufferingPrerollCheckEnabled || position > PlayerBufferingPrerollCheckOffset) &&
                         (playerBufferState.position == position || bufferDuration < PlayerBufferingDangerZone) &&
                         playerBufferState.bufferedPosition == bufferedPosition &&
@@ -1595,7 +1809,14 @@ function monitorPlayerBuffering() {
                     ) {
                         playerBufferState.numSame++;
                         if (playerBufferState.numSame == PlayerBufferingSameStateCount) {
-                            console.log('Attempt to fix buffering position:' + playerBufferState.position + ' bufferedPosition:' + playerBufferState.bufferedPosition + ' bufferDuration:' + playerBufferState.bufferDuration);
+                            console.log(
+                                'Attempt to fix buffering position:' +
+                                    playerBufferState.position +
+                                    ' bufferedPosition:' +
+                                    playerBufferState.bufferedPosition +
+                                    ' bufferDuration:' +
+                                    playerBufferState.bufferDuration
+                            );
                             const isPausePlay = !PlayerBufferingDoPlayerReload;
                             const isReload = PlayerBufferingDoPlayerReload;
                             doTwitchPlayerTask(isPausePlay, isReload);
@@ -1661,8 +1882,8 @@ window.realFetch = window.fetch;
  * @returns {void}
  */
 function hookFetch() {
-    window.fetch = function(url, init, ...args) {
-        if (typeof url === "string") {
+    window.fetch = function (url, init, ...args) {
+        if (typeof url === 'string') {
             if (url.includes('gql')) {
                 let deviceId = init.headers['X-Device-Id'];
                 if (typeof deviceId !== 'string') {
@@ -1672,40 +1893,76 @@ function hookFetch() {
                     GQLDeviceID = deviceId;
                     postTwitchWorkerMessage('UpdateDeviceId', GQLDeviceID);
                 }
-                if (typeof init.headers['Client-Version'] === 'string' && init.headers['Client-Version'] !== ClientVersion) {
-                    postTwitchWorkerMessage('UpdateClientVersion', ClientVersion = init.headers['Client-Version']);
+                if (
+                    typeof init.headers['Client-Version'] === 'string' &&
+                    init.headers['Client-Version'] !== ClientVersion
+                ) {
+                    postTwitchWorkerMessage('UpdateClientVersion', (ClientVersion = init.headers['Client-Version']));
                 }
-                if (typeof init.headers['Client-Session-Id'] === 'string' && init.headers['Client-Session-Id'] !== ClientSession) {
-                    postTwitchWorkerMessage('UpdateClientSession', ClientSession = init.headers['Client-Session-Id']);
+                if (
+                    typeof init.headers['Client-Session-Id'] === 'string' &&
+                    init.headers['Client-Session-Id'] !== ClientSession
+                ) {
+                    postTwitchWorkerMessage('UpdateClientSession', (ClientSession = init.headers['Client-Session-Id']));
                 }
-                if (typeof init.headers['Client-Integrity'] === 'string' && init.headers['Client-Integrity'] !== ClientIntegrityHeader) {
-                    postTwitchWorkerMessage('UpdateClientIntegrityHeader', ClientIntegrityHeader = init.headers['Client-Integrity']);
+                if (
+                    typeof init.headers['Client-Integrity'] === 'string' &&
+                    init.headers['Client-Integrity'] !== ClientIntegrityHeader
+                ) {
+                    postTwitchWorkerMessage(
+                        'UpdateClientIntegrityHeader',
+                        (ClientIntegrityHeader = init.headers['Client-Integrity'])
+                    );
                 }
-                if (typeof init.headers['Authorization'] === 'string' && init.headers['Authorization'] !== AuthorizationHeader) {
-                    postTwitchWorkerMessage('UpdateAuthorizationHeader', AuthorizationHeader = init.headers['Authorization']);
+                if (
+                    typeof init.headers['Authorization'] === 'string' &&
+                    init.headers['Authorization'] !== AuthorizationHeader
+                ) {
+                    postTwitchWorkerMessage(
+                        'UpdateAuthorizationHeader',
+                        (AuthorizationHeader = init.headers['Authorization'])
+                    );
                 }
                 // Get rid of mini player above chat - TODO: Reject this locally instead of having server reject it
-                if (init && typeof init.body === 'string' && init.body.includes('PlaybackAccessToken') && init.body.includes('picture-by-picture')) {
+                if (
+                    init &&
+                    typeof init.body === 'string' &&
+                    init.body.includes('PlaybackAccessToken') &&
+                    init.body.includes('picture-by-picture')
+                ) {
                     init.body = '';
                 }
-                if (tnsAdsEnabled && ForceAccessTokenPlayerType && typeof init.body === 'string' && init.body.includes('PlaybackAccessToken')) {
+                if (
+                    tnsAdsEnabled &&
+                    ForceAccessTokenPlayerType &&
+                    typeof init.body === 'string' &&
+                    init.body.includes('PlaybackAccessToken')
+                ) {
                     let replacedPlayerType = '';
                     const newBody = JSON.parse(init.body);
                     if (Array.isArray(newBody)) {
                         for (let i = 0; i < newBody.length; i++) {
-                            if (newBody[i]?.variables?.playerType && newBody[i]?.variables?.playerType !== ForceAccessTokenPlayerType) {
+                            if (
+                                newBody[i]?.variables?.playerType &&
+                                newBody[i]?.variables?.playerType !== ForceAccessTokenPlayerType
+                            ) {
                                 replacedPlayerType = newBody[i].variables.playerType;
                                 newBody[i].variables.playerType = ForceAccessTokenPlayerType;
                             }
                         }
                     } else {
-                        if (newBody?.variables?.playerType && newBody?.variables?.playerType !== ForceAccessTokenPlayerType) {
+                        if (
+                            newBody?.variables?.playerType &&
+                            newBody?.variables?.playerType !== ForceAccessTokenPlayerType
+                        ) {
                             replacedPlayerType = newBody.variables.playerType;
                             newBody.variables.playerType = ForceAccessTokenPlayerType;
                         }
                     }
                     if (replacedPlayerType) {
-                        console.log(`Replaced '${replacedPlayerType}' player type with '${ForceAccessTokenPlayerType}' player type`);
+                        console.log(
+                            `Replaced '${replacedPlayerType}' player type with '${ForceAccessTokenPlayerType}' player type`
+                        );
                         init.body = JSON.stringify(newBody);
                     }
                 }
@@ -1754,7 +2011,7 @@ async function handleWorkerFetchRequest(fetchRequest) {
  */
 function postTwitchWorkerMessage(key, value) {
     twitchWorkers.forEach((worker) => {
-        worker.postMessage({key: key, value: value});
+        worker.postMessage({ key: key, value: value });
     });
 }
 
@@ -1785,7 +2042,7 @@ function postTwitchWorkerMessage(key, value) {
 
 // Restaure les stats depuis localStorage au chargement
 try {
-    Object.assign(stats, JSON.parse(localStorage.getItem("twitchnosub-stats") || "{}"));
+    Object.assign(stats, JSON.parse(localStorage.getItem('twitchnosub-stats') || '{}'));
 } catch (e) {}
 
 /**
@@ -1795,7 +2052,7 @@ try {
  */
 function saveStats() {
     try {
-        localStorage.setItem("twitchnosub-stats", JSON.stringify(stats));
+        localStorage.setItem('twitchnosub-stats', JSON.stringify(stats));
     } catch (e) {}
 }
 
@@ -1816,8 +2073,8 @@ function logStats() {
  * @returns {void}
  */
 function toggleEnabled() {
-    const next = localStorage.getItem("twitchnosub-enabled") === "false";
-    localStorage.setItem("twitchnosub-enabled", next);
+    const next = localStorage.getItem('twitchnosub-enabled') === 'false';
+    localStorage.setItem('twitchnosub-enabled', next);
     location.reload();
 }
 
@@ -1833,25 +2090,40 @@ function toggleEnabled() {
  * @returns {void}
  */
 function applyFeatureFlag(flag, enabled) {
-    if (flag === "twitchnosub-ads") {
+    if (flag === 'twitchnosub-ads') {
         tnsAdsEnabled = enabled;
         if (enabled && PlayerBufferingFix) {
             monitorPlayerBuffering();
         }
-    } else if (flag === "twitchnosub-vods") {
+    } else if (flag === 'twitchnosub-vods') {
         tnsVodsEnabled = enabled;
     }
-    console.log('%c🎛️ Pubs: ' + (tnsAdsEnabled ? 'ON' : 'OFF') + ' · VODs: ' + (tnsVodsEnabled ? 'ON' : 'OFF') + ' — flags envoyés à ' + twitchWorkers.length + ' worker(s)', 'color:#9146FF');
+    console.log(
+        '%c🎛️ Pubs: ' +
+            (tnsAdsEnabled ? 'ON' : 'OFF') +
+            ' · VODs: ' +
+            (tnsVodsEnabled ? 'ON' : 'OFF') +
+            ' — flags envoyés à ' +
+            twitchWorkers.length +
+            ' worker(s)',
+        'color:#9146FF'
+    );
     postTwitchWorkerMessage('UpdateFeatureFlags', { adsEnabled: tnsAdsEnabled, vodsEnabled: tnsVodsEnabled });
-    setTimeout(function() {
+    setTimeout(function () {
         try {
             const reloaded = doTwitchPlayerTask(false, true);
             if (!reloaded) {
-                console.log('%c🔄 Reload du player impossible — rechargement de la page pour appliquer', 'color:#ff7b72');
+                console.log(
+                    '%c🔄 Reload du player impossible — rechargement de la page pour appliquer',
+                    'color:#ff7b72'
+                );
                 location.reload();
             }
         } catch (err) {
-            console.log('%c🔄 Reload du player en erreur (' + err.message + ') — rechargement de la page pour appliquer', 'color:#ff7b72');
+            console.log(
+                '%c🔄 Reload du player en erreur (' + err.message + ') — rechargement de la page pour appliquer',
+                'color:#ff7b72'
+            );
             location.reload();
         }
     }, 150);
@@ -1873,33 +2145,38 @@ function applyFeatureFlag(flag, enabled) {
  * @returns {void}
  */
 function injectStyles() {
-    if (document.getElementById("tns-hbtn-style")) {
+    if (document.getElementById('tns-hbtn-style')) {
         return;
     }
     try {
-        const style = document.createElement("style");
-        style.id = "tns-hbtn-style";
-        style.textContent = ".tns-hbtn{display:inline-flex;align-items:center;gap:5px;height:26px;margin-right:8px;padding:0 10px;border:none;border-radius:6px;background:#26262c;color:#efeff1;font:600 12px/1 system-ui;cursor:pointer;transition:background .15s}" +
-            ".tns-hbtn:hover{background:#3a3a3d}" +
-            ".tns-hbtn.off{background:#3a2430;color:#ff7b72}" +
-            ".tns-panel{position:fixed;z-index:999999;min-width:235px;background:#1e222d;border:1px solid #3a4150;border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);font:13px/1.6 system-ui;color:#efeff1}" +
-            ".tns-p-title{font-weight:700;color:#9146FF;margin-bottom:8px}" +
-            ".tns-p-stats{display:flex;justify-content:space-between;align-items:center;padding:2px 0}" +
-            ".tns-p-sep{height:1px;background:#3a4150;margin:8px 0}" +
-            ".tns-p-row{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin:0 -6px;cursor:pointer;border-radius:6px}" +
-            ".tns-p-row:hover{background:#26262c}" +
-            ".tns-p-pill{width:40px;height:20px;border-radius:10px;background:#3a3a3d;position:relative;flex:none;transition:background .15s}" +
+        const style = document.createElement('style');
+        style.id = 'tns-hbtn-style';
+        style.textContent =
+            '.tns-hbtn{display:inline-flex;align-items:center;gap:5px;height:26px;margin-right:8px;padding:0 10px;border:none;border-radius:6px;background:#26262c;color:#efeff1;font:600 12px/1 system-ui;cursor:pointer;transition:background .15s}' +
+            '.tns-hbtn:hover{background:#3a3a3d}' +
+            '.tns-hbtn.off{background:#3a2430;color:#ff7b72}' +
+            '.tns-panel{position:fixed;z-index:999999;min-width:235px;background:#1e222d;border:1px solid #3a4150;border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);font:13px/1.6 system-ui;color:#efeff1}' +
+            '.tns-p-title{font-weight:700;color:#9146FF;margin-bottom:8px}' +
+            '.tns-p-stats{display:flex;justify-content:space-between;align-items:center;padding:2px 0}' +
+            '.tns-p-sep{height:1px;background:#3a4150;margin:8px 0}' +
+            '.tns-p-row{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin:0 -6px;cursor:pointer;border-radius:6px}' +
+            '.tns-p-row:hover{background:#26262c}' +
+            '.tns-p-pill{width:40px;height:20px;border-radius:10px;background:#3a3a3d;position:relative;flex:none;transition:background .15s}' +
             ".tns-p-pill::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#efeff1;transition:left .15s}" +
-            ".tns-p-pill.on{background:#9146FF}" +
-            ".tns-p-pill.on::after{left:22px}";
+            '.tns-p-pill.on{background:#9146FF}' +
+            '.tns-p-pill.on::after{left:22px}';
         document.head.appendChild(style);
-        document.addEventListener("click", function(e) {
-            const panel = document.getElementById("tns-panel");
-            const inside = e.target.closest ? !!e.target.closest("#tns-panel") : false;
-            if (panel && !inside && e.target.id !== "tns-hstats") {
-                panel.remove();
-            }
-        }, true);
+        document.addEventListener(
+            'click',
+            function (e) {
+                const panel = document.getElementById('tns-panel');
+                const inside = e.target.closest ? !!e.target.closest('#tns-panel') : false;
+                if (panel && !inside && e.target.id !== 'tns-hstats') {
+                    panel.remove();
+                }
+            },
+            true
+        );
     } catch (err) {
         console.log('[TwVodNoAdsJCed] Erreur injectStyles: ' + err);
     }
@@ -1912,44 +2189,56 @@ function injectStyles() {
  * @returns {void}
  */
 function toggleStatsPanel() {
-    const existing = document.getElementById("tns-panel");
+    const existing = document.getElementById('tns-panel');
     if (existing) {
         existing.remove();
         return;
     }
-    const statsBtn = document.getElementById("tns-hstats");
+    const statsBtn = document.getElementById('tns-hstats');
     if (!statsBtn) {
         return;
     }
-    const panel = document.createElement("div");
-    panel.id = "tns-panel";
-    panel.className = "tns-panel";
+    const panel = document.createElement('div');
+    panel.id = 'tns-panel';
+    panel.className = 'tns-panel';
     panel.innerHTML =
         '<div class="tns-p-title">📊 TwitchNoSub+Ads</div>' +
-        '<div class="tns-p-stats"><span>Pubs bloquées</span><b>' + stats.adsBlocked + '</b></div>' +
-        '<div class="tns-p-stats"><span>VODs débloquées</span><b>' + stats.vodsUnlocked + '</b></div>' +
+        '<div class="tns-p-stats"><span>Pubs bloquées</span><b>' +
+        stats.adsBlocked +
+        '</b></div>' +
+        '<div class="tns-p-stats"><span>VODs débloquées</span><b>' +
+        stats.vodsUnlocked +
+        '</b></div>' +
         '<div class="tns-p-sep"></div>' +
-        '<div class="tns-p-row" data-flag="twitchnosub-ads" data-on="' + tnsAdsEnabled + '"><span>📺 Blocage pubs</span><span class="tns-p-pill' + (tnsAdsEnabled ? " on" : " off") + '"></span></div>' +
-        '<div class="tns-p-row" data-flag="twitchnosub-vods" data-on="' + tnsVodsEnabled + '"><span>🎬 VODs sub-only</span><span class="tns-p-pill' + (tnsVodsEnabled ? " on" : " off") + '"></span></div>';
-    panel.addEventListener("click", function(e) {
-        const row = e.target.closest ? e.target.closest(".tns-p-row") : null;
+        '<div class="tns-p-row" data-flag="twitchnosub-ads" data-on="' +
+        tnsAdsEnabled +
+        '"><span>📺 Blocage pubs</span><span class="tns-p-pill' +
+        (tnsAdsEnabled ? ' on' : ' off') +
+        '"></span></div>' +
+        '<div class="tns-p-row" data-flag="twitchnosub-vods" data-on="' +
+        tnsVodsEnabled +
+        '"><span>🎬 VODs sub-only</span><span class="tns-p-pill' +
+        (tnsVodsEnabled ? ' on' : ' off') +
+        '"></span></div>';
+    panel.addEventListener('click', function (e) {
+        const row = e.target.closest ? e.target.closest('.tns-p-row') : null;
         if (!row) {
             return;
         }
-        const flag = row.getAttribute("data-flag");
-        const next = row.getAttribute("data-on") !== "true";
-        localStorage.setItem(flag, next ? "true" : "false");
+        const flag = row.getAttribute('data-flag');
+        const next = row.getAttribute('data-on') !== 'true';
+        localStorage.setItem(flag, next ? 'true' : 'false');
         applyFeatureFlag(flag, next);
-        row.setAttribute("data-on", next);
-        const pill = row.querySelector(".tns-p-pill");
+        row.setAttribute('data-on', next);
+        const pill = row.querySelector('.tns-p-pill');
         if (pill) {
-            pill.className = "tns-p-pill" + (next ? " on" : " off");
+            pill.className = 'tns-p-pill' + (next ? ' on' : ' off');
         }
     });
     document.body.appendChild(panel);
     const r = statsBtn.getBoundingClientRect();
-    panel.style.top = (r.bottom + 6) + "px";
-    panel.style.left = r.left + "px";
+    panel.style.top = r.bottom + 6 + 'px';
+    panel.style.left = r.left + 'px';
 }
 
 /**
@@ -2020,28 +2309,28 @@ function injectHeaderButtons(disabledOnly) {
      * Tente l'injection une fois. Retourne true si déjà injecté ou injection réussie.
      * @returns {boolean}
      */
-    const tryInject = function() {
-        if (document.getElementById("tns-hstats") || document.getElementById("tns-htoggle")) {
+    const tryInject = function () {
+        if (document.getElementById('tns-hstats') || document.getElementById('tns-htoggle')) {
             return true;
         }
         const container = findContainer();
         if (!container) {
             return false;
         }
-        const toggleBtn = document.createElement("button");
-        toggleBtn.id = "tns-htoggle";
-        toggleBtn.className = "tns-hbtn" + (isEnabled ? "" : " off");
-        toggleBtn.textContent = isEnabled ? "⏻ ON" : "⏻ OFF";
-        toggleBtn.title = "Activer / désactiver le script";
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'tns-htoggle';
+        toggleBtn.className = 'tns-hbtn' + (isEnabled ? '' : ' off');
+        toggleBtn.textContent = isEnabled ? '⏻ ON' : '⏻ OFF';
+        toggleBtn.title = 'Activer / désactiver le script';
         toggleBtn.onclick = toggleEnabled;
         if (disabledOnly) {
             container.prepend(toggleBtn);
         } else {
-            const statsBtn = document.createElement("button");
-            statsBtn.id = "tns-hstats";
-            statsBtn.className = "tns-hbtn";
-            statsBtn.textContent = "📊 Stats";
-            statsBtn.title = "Afficher les stats";
+            const statsBtn = document.createElement('button');
+            statsBtn.id = 'tns-hstats';
+            statsBtn.className = 'tns-hbtn';
+            statsBtn.textContent = '📊 Stats';
+            statsBtn.title = 'Afficher les stats';
             statsBtn.onclick = toggleStatsPanel;
             container.prepend(toggleBtn);
             container.prepend(statsBtn);
@@ -2055,12 +2344,13 @@ function injectHeaderButtons(disabledOnly) {
 
     // Re-tente toutes les 2s jusqu'à succès (comme l'original qui fonctionnait)
     let attempts = 0;
-    const pollInterval = setInterval(function() {
+    const pollInterval = setInterval(function () {
         attempts++;
         if (tryInject()) {
             clearInterval(pollInterval);
             console.log('[TwVodNoAdsJCed] Injection terminée après ' + attempts + ' tentative(s)');
-        } else if (attempts > 150) { // 5 min max
+        } else if (attempts > 150) {
+            // 5 min max
             clearInterval(pollInterval);
             console.log('[TwVodNoAdsJCed] Échec injection après 150 tentatives — conteneur introuvable');
         }
@@ -2088,8 +2378,16 @@ function injectHeaderButtons(disabledOnly) {
  * @type {number}
  */
 const ourTwitchAdSolutionsVersion = 1;
-if (typeof window.twitchAdSolutionsVersion !== 'undefined' && window.twitchAdSolutionsVersion >= ourTwitchAdSolutionsVersion) {
-    console.log("skipping vaft as there's another script active. ourVersion:" + ourTwitchAdSolutionsVersion + " activeVersion:" + window.twitchAdSolutionsVersion);
+if (
+    typeof window.twitchAdSolutionsVersion !== 'undefined' &&
+    window.twitchAdSolutionsVersion >= ourTwitchAdSolutionsVersion
+) {
+    console.log(
+        "skipping vaft as there's another script active. ourVersion:" +
+            ourTwitchAdSolutionsVersion +
+            ' activeVersion:' +
+            window.twitchAdSolutionsVersion
+    );
     window.twitchAdSolutionsVersion = ourTwitchAdSolutionsVersion;
     return;
 }
@@ -2100,11 +2398,11 @@ window.twitchAdSolutionsVersion = ourTwitchAdSolutionsVersion;
  * @type {ReadonlyArray<string>}
  */
 const RESTRICTION_SELECTORS = [
-    ".video-preview-card-restriction",
-    ".video-preview-card__banner--sub-only",
-    ".pulse-card__card--restricted",
+    '.video-preview-card-restriction',
+    '.video-preview-card__banner--sub-only',
+    '.pulse-card__card--restricted',
     '[data-a-target="sub-only-badge"]',
-    ".video-player__mandatory-login"
+    '.video-player__mandatory-login'
 ];
 
 /**
@@ -2114,7 +2412,7 @@ const RESTRICTION_SELECTORS = [
  * @returns {void}
  */
 function removeRestrictions(root) {
-    RESTRICTION_SELECTORS.forEach(function(sel) {
+    RESTRICTION_SELECTORS.forEach(function (sel) {
         var els = (root || document).querySelectorAll(sel);
         for (var i = 0; i < els.length; i++) {
             els[i].remove();
@@ -2132,9 +2430,9 @@ function removeRestrictions(root) {
  */
 function watchDOM() {
     var db = null;
-    new MutationObserver(function(muts) {
+    new MutationObserver(function (muts) {
         if (db) cancelAnimationFrame(db);
-        db = requestAnimationFrame(function() {
+        db = requestAnimationFrame(function () {
             for (var i = 0; i < muts.length; i++) {
                 var ns = muts[i].addedNodes;
                 for (var j = 0; j < ns.length; j++) {
@@ -2170,13 +2468,13 @@ function onContentLoaded() {
             }
         });
     } catch {}
-    const block = e => {
+    const block = (e) => {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
     };
     let wasVideoPlaying = true;
-    const visibilityChange = e => {
+    const visibilityChange = (e) => {
         const isChrome = typeof chrome !== 'undefined';
         const videos = document.getElementsByTagName('video');
         if (videos.length > 0) {
@@ -2214,32 +2512,26 @@ function onContentLoaded() {
     } catch {}
     // Hooks pour préserver volume / résolution lors d'un reload du player
     try {
-        const keysToCache = [
-            'video-quality',
-            'video-muted',
-            'volume',
-            'lowLatencyModeEnabled',
-            'persistenceEnabled'
-        ];
+        const keysToCache = ['video-quality', 'video-muted', 'volume', 'lowLatencyModeEnabled', 'persistenceEnabled'];
         const cachedValues = new Map();
         for (let i = 0; i < keysToCache.length; i++) {
             cachedValues.set(keysToCache[i], localStorage.getItem(keysToCache[i]));
         }
         const realSetItem = localStorage.setItem;
-        localStorage.setItem = function(key, value) {
+        localStorage.setItem = function (key, value) {
             if (cachedValues.has(key)) {
                 cachedValues.set(key, value);
             }
             realSetItem.apply(this, arguments);
         };
         const realGetItem = localStorage.getItem;
-        localStorage.getItem = function(key) {
+        localStorage.getItem = function (key) {
             if (cachedValues.has(key)) {
                 return cachedValues.get(key);
             }
             return realGetItem.apply(this, arguments);
         };
-        if (!localStorage.getItem.toString().includes(Object.keys({cachedValues})[0])) {
+        if (!localStorage.getItem.toString().includes(Object.keys({ cachedValues })[0])) {
             localStorageHookFailed = true;
         }
     } catch (err) {
@@ -2266,7 +2558,7 @@ watchDOM();
 console.log('[TwVodNoAdsJCed] watchDOM OK');
 
 if (!isEnabled) {
-    console.log("TwitchNoSub+Ads disabled");
+    console.log('TwitchNoSub+Ads disabled');
     injectHeaderButtons(true);
     return;
 }
@@ -2279,10 +2571,10 @@ if (PlayerBufferingFix && tnsAdsEnabled) {
     monitorPlayerBuffering();
 }
 
-if (document.readyState === "complete" || document.readyState === "loaded" || document.readyState === "interactive") {
+if (document.readyState === 'complete' || document.readyState === 'loaded' || document.readyState === 'interactive') {
     onContentLoaded();
 } else {
-    window.addEventListener("DOMContentLoaded", function() {
+    window.addEventListener('DOMContentLoaded', function () {
         onContentLoaded();
     });
 }

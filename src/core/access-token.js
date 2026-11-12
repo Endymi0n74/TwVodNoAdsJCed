@@ -23,14 +23,14 @@ function getAccessToken(channelName, playerType) {
             isLive: true,
             login: channelName,
             isVod: false,
-            vodID: "",
+            vodID: '',
             playerType: playerType,
             platform: playerType == 'autoplay' ? 'android' : 'web'
         },
         extensions: {
             persistedQuery: {
-                version:1,
-                sha256Hash:"ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9"
+                version: 1,
+                sha256Hash: 'ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9'
             }
         }
     };

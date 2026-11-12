@@ -19,7 +19,7 @@
 
 // Restaure les stats depuis localStorage au chargement
 try {
-    Object.assign(stats, JSON.parse(localStorage.getItem("twitchnosub-stats") || "{}"));
+    Object.assign(stats, JSON.parse(localStorage.getItem('twitchnosub-stats') || '{}'));
 } catch (e) {}
 
 /**
@@ -29,7 +29,7 @@ try {
  */
 function saveStats() {
     try {
-        localStorage.setItem("twitchnosub-stats", JSON.stringify(stats));
+        localStorage.setItem('twitchnosub-stats', JSON.stringify(stats));
     } catch (e) {}
 }
 
@@ -50,8 +50,8 @@ function logStats() {
  * @returns {void}
  */
 function toggleEnabled() {
-    const next = localStorage.getItem("twitchnosub-enabled") === "false";
-    localStorage.setItem("twitchnosub-enabled", next);
+    const next = localStorage.getItem('twitchnosub-enabled') === 'false';
+    localStorage.setItem('twitchnosub-enabled', next);
     location.reload();
 }
 
@@ -67,25 +67,40 @@ function toggleEnabled() {
  * @returns {void}
  */
 function applyFeatureFlag(flag, enabled) {
-    if (flag === "twitchnosub-ads") {
+    if (flag === 'twitchnosub-ads') {
         tnsAdsEnabled = enabled;
         if (enabled && PlayerBufferingFix) {
             monitorPlayerBuffering();
         }
-    } else if (flag === "twitchnosub-vods") {
+    } else if (flag === 'twitchnosub-vods') {
         tnsVodsEnabled = enabled;
     }
-    console.log('%c🎛️ Pubs: ' + (tnsAdsEnabled ? 'ON' : 'OFF') + ' · VODs: ' + (tnsVodsEnabled ? 'ON' : 'OFF') + ' — flags envoyés à ' + twitchWorkers.length + ' worker(s)', 'color:#9146FF');
+    console.log(
+        '%c🎛️ Pubs: ' +
+            (tnsAdsEnabled ? 'ON' : 'OFF') +
+            ' · VODs: ' +
+            (tnsVodsEnabled ? 'ON' : 'OFF') +
+            ' — flags envoyés à ' +
+            twitchWorkers.length +
+            ' worker(s)',
+        'color:#9146FF'
+    );
     postTwitchWorkerMessage('UpdateFeatureFlags', { adsEnabled: tnsAdsEnabled, vodsEnabled: tnsVodsEnabled });
-    setTimeout(function() {
+    setTimeout(function () {
         try {
             const reloaded = doTwitchPlayerTask(false, true);
             if (!reloaded) {
-                console.log('%c🔄 Reload du player impossible — rechargement de la page pour appliquer', 'color:#ff7b72');
+                console.log(
+                    '%c🔄 Reload du player impossible — rechargement de la page pour appliquer',
+                    'color:#ff7b72'
+                );
                 location.reload();
             }
         } catch (err) {
-            console.log('%c🔄 Reload du player en erreur (' + err.message + ') — rechargement de la page pour appliquer', 'color:#ff7b72');
+            console.log(
+                '%c🔄 Reload du player en erreur (' + err.message + ') — rechargement de la page pour appliquer',
+                'color:#ff7b72'
+            );
             location.reload();
         }
     }, 150);
