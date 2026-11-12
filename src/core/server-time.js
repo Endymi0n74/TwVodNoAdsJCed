@@ -9,6 +9,9 @@
  * @returns {string|null} L'heure du serveur, ou null si non trouvée
  */
 function getServerTimeFromM3u8(encodingsM3u8) {
+    if (!encodingsM3u8) {
+        return null;
+    }
     if (V2API) {
         const matches = encodingsM3u8.match(/#EXT-X-SESSION-DATA:DATA-ID="SERVER-TIME",VALUE="([^"]+)"/);
         return matches.length > 1 ? matches[1] : null;

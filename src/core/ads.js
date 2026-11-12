@@ -109,9 +109,32 @@ function getStreamUrlForResolution(encodingsM3u8, resolutionInfo) {
  * @returns {Promise<string>} Le m3u8 traité (backup player ou stripping appliqué)
  */
 async function processM3U8(url, textStr, realFetch) {
-    const streamInfo = StreamInfosByUrl[url];
+    let streamInfo = StreamInfosByUrl[url];
     if (!streamInfo) {
-        return textStr;
+        // Midroll / playlist inconnue (URL pas encore enregistrée via /channel/hls/) :
+        // on crée un contexte minimal pour permettre le stripping des segments pubs
+        // même sans infos de résolution. L'objet n'est pas stocké (les tokens midroll
+        // changent souvent) mais le stripping s'applique via AdSegmentCache partagé.
+        streamInfo = {
+            ChannelName: '',
+            IsShowingAd: false,
+            LastPlayerReload: 0,
+            EncodingsM3U8: null,
+            ModifiedM3U8: null,
+            IsUsingModifiedM3U8: false,
+            UsherParams: '',
+            RequestedAds: new Set(),
+            Urls: {},
+            ResolutionList: [],
+            BackupEncodingsM3U8Cache: {},
+            ActiveBackupPlayerType: null,
+            IsMidroll: false,
+            IsStrippingAdSegments: false,
+            NumStrippedAdSegments: 0,
+            IsTemporary: true
+        };
+        // Persiste l'état pour ne pas re-poster « pub bloquée » à chaque refresh du playlist
+        StreamInfosByUrl[url] = streamInfo;
     }
     if (HasTriggeredPlayerReload) {
         HasTriggeredPlayerReload = false;
@@ -143,93 +166,94 @@ async function processM3U8(url, textStr, realFetch) {
             }
         }
         const currentResolution = streamInfo.Urls[url];
-        if (!currentResolution) {
-            console.log('Ads will leak due to missing resolution info for ' + url);
-            return textStr;
-        }
-        const isHevc = currentResolution.Codecs.startsWith('hev') || currentResolution.Codecs.startsWith('hvc');
-        if (((isHevc && !SkipPlayerReloadOnHevc) || AlwaysReloadPlayerOnAd) && streamInfo.ModifiedM3U8 && !streamInfo.IsUsingModifiedM3U8) {
-            streamInfo.IsUsingModifiedM3U8 = true;
-            streamInfo.LastPlayerReload = Date.now();
-            postMessage({
-                key: 'ReloadPlayer'
-            });
-        }
-        let backupPlayerType = null;
-        let backupM3u8 = null;
-        let fallbackM3u8 = null;
-        let startIndex = 0;
-        let isDoingMinimalRequests = false;
-        if (streamInfo.LastPlayerReload > Date.now() - PlayerReloadMinimalRequestsTime) {
-            startIndex = PlayerReloadMinimalRequestsPlayerIndex;
-            isDoingMinimalRequests = true;
-        }
-        for (let playerTypeIndex = startIndex; !backupM3u8 && playerTypeIndex < BackupPlayerTypes.length; playerTypeIndex++) {
-            const playerType = BackupPlayerTypes[playerTypeIndex];
-            const realPlayerType = playerType.replace('-CACHED', '');
-            const isFullyCachedPlayerType = playerType != realPlayerType;
-            for (let i = 0; i < 2; i++) {
-                let isFreshM3u8 = false;
-                let encodingsM3u8 = streamInfo.BackupEncodingsM3U8Cache[playerType];
-                if (!encodingsM3u8) {
-                    isFreshM3u8 = true;
-                    try {
-                        const accessTokenResponse = await getAccessToken(streamInfo.ChannelName, realPlayerType);
-                        if (accessTokenResponse.status === 200) {
-                            const accessToken = await accessTokenResponse.json();
-                            const urlInfo = new URL('https://usher.ttvnw.net/api/' + (V2API ? 'v2/' : '') + 'channel/hls/' + streamInfo.ChannelName + '.m3u8' + streamInfo.UsherParams);
-                            urlInfo.searchParams.set('sig', accessToken.data.streamPlaybackAccessToken.signature);
-                            urlInfo.searchParams.set('token', accessToken.data.streamPlaybackAccessToken.value);
-                            const encodingsM3u8Response = await realFetch(urlInfo.href);
-                            if (encodingsM3u8Response.status === 200) {
-                                encodingsM3u8 = streamInfo.BackupEncodingsM3U8Cache[playerType] = await encodingsM3u8Response.text();
-                            }
-                        }
-                    } catch (err) {}
-                }
-                if (encodingsM3u8) {
-                    try {
-                        const streamM3u8Url = getStreamUrlForResolution(encodingsM3u8, currentResolution);
-                        const streamM3u8Response = await realFetch(streamM3u8Url);
-                        if (streamM3u8Response.status == 200) {
-                            const m3u8Text = await streamM3u8Response.text();
-                            if (m3u8Text) {
-                                if (playerType == FallbackPlayerType) {
-                                    fallbackM3u8 = m3u8Text;
-                                }
-                                if ((!m3u8Text.includes(AdSignifier) && (SimulatedAdsDepth == 0 || playerTypeIndex >= SimulatedAdsDepth - 1)) || (!fallbackM3u8 && playerTypeIndex >= BackupPlayerTypes.length - 1)) {
-                                    backupPlayerType = playerType;
-                                    backupM3u8 = m3u8Text;
-                                    break;
-                                }
-                                if (isFullyCachedPlayerType) {
-                                    break;
-                                }
-                                if (isDoingMinimalRequests) {
-                                    backupPlayerType = playerType;
-                                    backupM3u8 = m3u8Text;
-                                    break;
+        let isHevc = false;
+        if (currentResolution) {
+            isHevc = currentResolution.Codecs.startsWith('hev') || currentResolution.Codecs.startsWith('hvc');
+            if (((isHevc && !SkipPlayerReloadOnHevc) || AlwaysReloadPlayerOnAd) && streamInfo.ModifiedM3U8 && !streamInfo.IsUsingModifiedM3U8) {
+                streamInfo.IsUsingModifiedM3U8 = true;
+                streamInfo.LastPlayerReload = Date.now();
+                postMessage({
+                    key: 'ReloadPlayer'
+                });
+            }
+            let backupPlayerType = null;
+            let backupM3u8 = null;
+            let fallbackM3u8 = null;
+            let startIndex = 0;
+            let isDoingMinimalRequests = false;
+            if (streamInfo.LastPlayerReload > Date.now() - PlayerReloadMinimalRequestsTime) {
+                startIndex = PlayerReloadMinimalRequestsPlayerIndex;
+                isDoingMinimalRequests = true;
+            }
+            for (let playerTypeIndex = startIndex; !backupM3u8 && playerTypeIndex < BackupPlayerTypes.length; playerTypeIndex++) {
+                const playerType = BackupPlayerTypes[playerTypeIndex];
+                const realPlayerType = playerType.replace('-CACHED', '');
+                const isFullyCachedPlayerType = playerType != realPlayerType;
+                for (let i = 0; i < 2; i++) {
+                    let isFreshM3u8 = false;
+                    let encodingsM3u8 = streamInfo.BackupEncodingsM3U8Cache[playerType];
+                    if (!encodingsM3u8) {
+                        isFreshM3u8 = true;
+                        try {
+                            const accessTokenResponse = await getAccessToken(streamInfo.ChannelName, realPlayerType);
+                            if (accessTokenResponse.status === 200) {
+                                const accessToken = await accessTokenResponse.json();
+                                const urlInfo = new URL('https://usher.ttvnw.net/api/' + (V2API ? 'v2/' : '') + 'channel/hls/' + streamInfo.ChannelName + '.m3u8' + streamInfo.UsherParams);
+                                urlInfo.searchParams.set('sig', accessToken.data.streamPlaybackAccessToken.signature);
+                                urlInfo.searchParams.set('token', accessToken.data.streamPlaybackAccessToken.value);
+                                const encodingsM3u8Response = await realFetch(urlInfo.href);
+                                if (encodingsM3u8Response.status === 200) {
+                                    encodingsM3u8 = streamInfo.BackupEncodingsM3U8Cache[playerType] = await encodingsM3u8Response.text();
                                 }
                             }
-                        }
-                    } catch (err) {}
-                }
-                streamInfo.BackupEncodingsM3U8Cache[playerType] = null;
-                if (isFreshM3u8) {
-                    break;
+                        } catch (err) {}
+                    }
+                    if (encodingsM3u8) {
+                        try {
+                            const streamM3u8Url = getStreamUrlForResolution(encodingsM3u8, currentResolution);
+                            const streamM3u8Response = await realFetch(streamM3u8Url);
+                            if (streamM3u8Response.status == 200) {
+                                const m3u8Text = await streamM3u8Response.text();
+                                if (m3u8Text) {
+                                    if (playerType == FallbackPlayerType) {
+                                        fallbackM3u8 = m3u8Text;
+                                    }
+                                    if ((!m3u8Text.includes(AdSignifier) && (SimulatedAdsDepth == 0 || playerTypeIndex >= SimulatedAdsDepth - 1)) || (!fallbackM3u8 && playerTypeIndex >= BackupPlayerTypes.length - 1)) {
+                                        backupPlayerType = playerType;
+                                        backupM3u8 = m3u8Text;
+                                        break;
+                                    }
+                                    if (isFullyCachedPlayerType) {
+                                        break;
+                                    }
+                                    if (isDoingMinimalRequests) {
+                                        backupPlayerType = playerType;
+                                        backupM3u8 = m3u8Text;
+                                        break;
+                                    }
+                                }
+                            }
+                        } catch (err) {}
+                    }
+                    streamInfo.BackupEncodingsM3U8Cache[playerType] = null;
+                    if (isFreshM3u8) {
+                        break;
+                    }
                 }
             }
-        }
-        if (!backupM3u8 && fallbackM3u8) {
-            backupPlayerType = FallbackPlayerType;
-            backupM3u8 = fallbackM3u8;
-        }
-        if (backupM3u8) {
-            textStr = backupM3u8;
-            if (streamInfo.ActiveBackupPlayerType != backupPlayerType) {
-                streamInfo.ActiveBackupPlayerType = backupPlayerType;
-                console.log(`Blocking${(streamInfo.IsMidroll ? ' midroll ' : ' ')}ads (${backupPlayerType})`);
+            if (!backupM3u8 && fallbackM3u8) {
+                backupPlayerType = FallbackPlayerType;
+                backupM3u8 = fallbackM3u8;
             }
+            if (backupM3u8) {
+                textStr = backupM3u8;
+                if (streamInfo.ActiveBackupPlayerType != backupPlayerType) {
+                    streamInfo.ActiveBackupPlayerType = backupPlayerType;
+                    console.log(`Blocking${(streamInfo.IsMidroll ? ' midroll ' : ' ')}ads (${backupPlayerType})`);
+                }
+            }
+        } else {
+            console.log('Ads may leak due to missing resolution info for ' + url);
         }
         const stripHevc = isHevc && streamInfo.ModifiedM3U8;
         if (IsAdStrippingEnabled || stripHevc) {
@@ -260,5 +284,9 @@ async function processM3U8(url, textStr, realFetch) {
         isStrippingAdSegments: streamInfo.IsStrippingAdSegments,
         numStrippedAdSegments: streamInfo.NumStrippedAdSegments
     });
+    // Fin de pub sur un streamInfo temporaire : libère l'entrée (l'URL midroll ne resservira pas)
+    if (streamInfo.IsTemporary && !streamInfo.IsShowingAd) {
+        delete StreamInfosByUrl[url];
+    }
     return textStr;
 }

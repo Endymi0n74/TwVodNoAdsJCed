@@ -114,7 +114,8 @@ function hookWorkerFetch() {
                             const encodingsM3u8 = await response.text();
                             const serverTime = getServerTimeFromM3u8(encodingsM3u8);
                             let streamInfo = StreamInfos[channelName];
-                            if (streamInfo != null && streamInfo.EncodingsM3U8 != null && (await realFetch(streamInfo.EncodingsM3u8.match(/^https:.*\.m3u8$/m)[0])).status !== 200) {
+                            const cachedEncodingUrl = streamInfo != null && streamInfo.EncodingsM3U8 != null ? streamInfo.EncodingsM3U8.match(/^https:.*\.m3u8$/m) : null;
+                            if (streamInfo != null && streamInfo.EncodingsM3U8 != null && (!cachedEncodingUrl || (await realFetch(cachedEncodingUrl[0])).status !== 200)) {
                                 // The cached encodings are dead (the stream probably restarted)
                                 streamInfo = null;
                             }

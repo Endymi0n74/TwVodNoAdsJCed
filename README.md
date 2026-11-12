@@ -2,7 +2,7 @@
 
 [![Install with Tampermonkey](https://img.shields.io/badge/Install%20with-Tampermonkey-9146FF?style=for-the-badge)](https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js)
 
-![Version](https://img.shields.io/badge/version-1.1.4-9146FF?style=for-the-badge) ![Licence](https://img.shields.io/github/license/Endymi0n74/TwVodNoAdsJCed?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.1.5-9146FF?style=for-the-badge) ![Licence](https://img.shields.io/github/license/Endymi0n74/TwVodNoAdsJCed?style=for-the-badge)
 
 **🇫🇷 Français** · [🇬🇧 English](README.en.md)
 
@@ -92,7 +92,7 @@ Basé sur [pixeltris/TwitchAdSolutions](https://github.com/pixeltris/TwitchAdSol
 ## ❓ FAQ — erreurs courantes & conflits
 
 ### Comment vérifier la version installée ?
-- Tampermonkey → tableau de bord : la colonne « Version » affiche la version installée (ex. `1.1.4`).
+- Tampermonkey → tableau de bord : la colonne « Version » affiche la version installée (ex. `1.1.5`).
 - Comparez avec le badge version du README ou la dernière entrée du [CHANGELOG](CHANGELOG.md). Si une version plus récente existe : **Mettre à jour** (ou réinstaller depuis l'URL d'installation).
 
 ### Le script ne fait rien

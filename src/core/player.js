@@ -144,6 +144,36 @@ window.reloadTwitchPlayer = () => {
 };
 
 /**
+ * Met à jour le bandeau « Blocking ads » affiché sur le player.
+ *
+ * Crée l'overlay au premier appel puis met à jour son texte et sa visibilité.
+ * Adapté de vaft (pixeltris/TwitchAdSolutions).
+ *
+ * @param {Object} data - { hasAds, isMidroll, isStrippingAdSegments }
+ * @returns {void}
+ */
+function updateAdblockBanner(data) {
+    const playerRootDiv = document.querySelector('.video-player');
+    if (playerRootDiv != null) {
+        let adBlockDiv = null;
+        adBlockDiv = playerRootDiv.querySelector('.adblock-overlay');
+        if (adBlockDiv == null) {
+            adBlockDiv = document.createElement('div');
+            adBlockDiv.className = 'adblock-overlay';
+            adBlockDiv.innerHTML = '<div class="player-adblock-notice" style="color: white; background-color: rgba(0, 0, 0, 0.8); position: absolute; top: 0px; left: 0px; padding: 5px;"><p></p></div>';
+            adBlockDiv.style.display = 'none';
+            adBlockDiv.P = adBlockDiv.querySelector('p');
+            playerRootDiv.appendChild(adBlockDiv);
+        }
+        if (adBlockDiv != null) {
+            isActivelyStrippingAds = data.isStrippingAdSegments;
+            adBlockDiv.P.textContent = 'Blocking' + (data.isMidroll ? ' midroll' : '') + ' ads' + (data.isStrippingAdSegments ? ' (stripping)' : '');
+            adBlockDiv.style.display = data.hasAds && playerBufferState.isLive ? 'block' : 'none';
+        }
+    }
+}
+
+/**
  * Boucle de surveillance du buffering du player.
  *
  * Détecte quand le player est coincé (position et buffer qui n'évoluent plus)

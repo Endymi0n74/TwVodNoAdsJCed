@@ -37,7 +37,7 @@ const MODULES = [
 const USERScript_HEADER = `// ==UserScript==
 // @name         TwVodNoAdsJCed
 // @namespace    https://github.com/Endymi0n74/TwVodNoAdsJCed
-// @version      1.1.4
+// @version      1.1.5
 // @description  Block Twitch ads + watch sub-only VODs (with unmute)
 // @updateURL    https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js
 // @downloadURL  https://raw.githubusercontent.com/Endymi0n74/TwVodNoAdsJCed/master/combined/twitch-combined.user.js

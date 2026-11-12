@@ -1,6 +1,6 @@
 {
     "name": "twvodnoadsjced",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "description": "Tampermonkey userscript to block Twitch ads, unlock sub-only VODs, and unmute VODs.",
     "main": "build.js",
     "scripts": {

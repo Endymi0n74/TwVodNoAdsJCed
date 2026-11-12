@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.5 (2026-11-12)
+- **Fix blocage des midroll ads** : `processM3U8` ne renvoie plus le playlist brut quand les infos de résolution sont absentes. Le stripping (`stripAdSegments`) s'applique désormais même sans `currentResolution`, et un `streamInfo` temporaire (persisté, `IsTemporary`) est créé pour les playlists midroll jamais vues via `/channel/hls/` → les midrolls sont de nouveau bloqués
+- **Fix `updateAdblockBanner` manquante** : fonction perdue lors du refactor modulaire (appelée par `worker-utils.js` et `player.js`) → `ReferenceError` à chaque pub. Réimplémentée d'après vaft (overlay « Blocking ads »)
+- **Fix `TypeError: Cannot read properties of undefined (reading 'match')`** : coquille de casse dans `fetch-worker.js` (`EncodingsM3U8` testé, `.match` appelé sur `EncodingsM3u8`) qui faisait crasher `processAfter` à chaque requête `/channel/hls/`
+- **Fix compteur « Pub bloquée » qui s'emballait** : l'état du `streamInfo` temporaire est persisté entre les refreshs du playlist, plus d'incrément à chaque seconde
+- **Robustesse** : `getServerTimeFromM3u8` retourne `null` si le playlist est absent ; match nul géré dans la vérification du cache d'encodages
+
 ## v1.1.4 (2026-11-10)
 - **Refactor modulaire** : le script monolithique (~1 500 lignes) est découpé en 14 modules dans `src/` (déclarations d'options, GQL, tokens d'accès, fetch worker, worker utils, stripping pubs, player, fetch hook, stockage, UI, orchestration) + `build.js` pour concaténation → `combined/twitch-combined.user.js`
 - **Variables globales centralisées** dans `src/core/globals.js` (évite les erreurs de référence temporelle TDZ liées à l'ordre de concaténation)

@@ -5,7 +5,7 @@
 ## État actuel
 
 - **Répertoire de travail :** `D:\codex\TwVodNoAdsJCed`
-- **Version :** 1.1.4 (équivalente au repo GitHub `Endymi0n74/TwVodNoAdsJCed`)
+- **Version :** 1.1.5 (équivalente au repo GitHub `Endymi0n74/TwVodNoAdsJCed`)
 - **Statut :** build modulaire opérationnel, tous les tests OK
 
 ## Structure (modulaire)
@@ -75,6 +75,16 @@ D:\codex\TwVodNoAdsJCed/
 4. **`isActivelyStrippingAds`** : variable partagée entre le handler de message du worker et `monitorPlayerBuffering`.
 5. **Pas de `try/catch {}` vide** : ajouter au moins un `console.warn` dans les blocs catch (règle ESLint `no-empty` avec `allowEmptyCatch: false`).
 6. **Taille du .user.js** : les JSDoc sont inclus dans le fichier généré (95.4 Ko). Acceptable pour Tampermonkey.
+
+## Correctifs récents
+
+- **Blocage des midroll ads (processM3U8, src/core/ads.js)** : le `return textStr` précoce quand `streamInfo.Urls[url]` est absent (cas des midrolls, dont l'URL m3u8 n'est pas dans la map des résolutions du live) empêchait tout stripping/backup-player → le midroll fuyait. Le stripping (`stripAdSegments`, détection par `AdSignifier`) s'applique maintenant même sans `currentResolution` ; seul le backup player (qui nécessite `currentResolution`) reste conditionné. Les midrolls sont de nouveau bloqués.
+
+- **Midrolls dont l'URL n'est pas enregistrée (processM3U8, src/core/ads.js)** : quand `StreamInfosByUrl[url]` est undefined (midroll jamais vu via `/channel/hls/`), la fonction retournait `textStr` brut sans aucun stripping. Elle crée maintenant un `streamInfo` minimal temporaire (`IsTemporary: true`), **persisté** dans `StreamInfosByUrl[url]` pour que `IsShowingAd` survive aux refreshs du playlist (évite le spam de « Pub bloquée »), et supprimé en fin de pub. Le cache `AdSegmentCache` partagé assure la déduplication.
+
+- **`updateAdblockBanner` manquante (src/core/player.js)** : perdue lors du refactor modulaire (appelée par `worker-utils.js` et `player.js`, jamais définie) → `ReferenceError` à chaque `UpdateAdBlockBanner`. Réimplémentée d'après vaft : overlay `.adblock-overlay` dans `.video-player`, texte « Blocking [midroll] ads (stripping) », met à jour `isActivelyStrippingAds`.
+
+- **Coquille `EncodingsM3u8` (src/core/fetch-worker.js)** : la condition testait `EncodingsM3U8` (majuscule) mais appelait `.match` sur `EncodingsM3u8` (minuscule, inexistant) → `TypeError: Cannot read properties of undefined (reading 'match')` à chaque requête `/channel/hls/`. Corrigé (bonne casse + match nul géré). `getServerTimeFromM3u8` retourne aussi `null` si le playlist est absent/falsy.
 
 ## Fichiers à ne jamais toucher sans raison
 
